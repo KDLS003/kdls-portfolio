@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { FiAward, FiLayers, FiPlusCircle, FiRefreshCcw } from 'react-icons/fi'
+import { FiAward, FiLayers, FiPlusCircle, FiRefreshCcw, FiTrash2 } from 'react-icons/fi'
 import Link from 'next/link'
 import {
   Achievement,
@@ -107,7 +107,13 @@ const TabButton = ({
   </motion.button>
 )
 
-const PreviewCard = ({ achievement }: { achievement: Achievement }) => {
+const PreviewCard = ({
+  achievement,
+  onDelete,
+}: {
+  achievement: Achievement
+  onDelete: (achievement: Achievement) => void
+}) => {
   const isUpcoming = achievement.status === 'upcoming'
 
   return (
@@ -121,15 +127,29 @@ const PreviewCard = ({ achievement }: { achievement: Achievement }) => {
           <h3 className="mt-1 text-lg font-semibold text-white">{achievement.title}</h3>
           <p className="text-xs text-gray-400">{achievement.issuer}</p>
         </div>
-        <span
-          className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-wide ${
-            isUpcoming
-              ? 'border border-primary/40 text-primary/80'
-              : 'border border-emerald-400/40 text-emerald-300'
-          }`}
-        >
-          {isUpcoming ? 'Upcoming' : 'Earned'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-wide ${
+              isUpcoming
+                ? 'border border-primary/40 text-primary/80'
+                : 'border border-emerald-400/40 text-emerald-300'
+            }`}
+          >
+            {isUpcoming ? 'Upcoming' : 'Earned'}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(`Remove ${achievement.title}? This only updates the preview list.`)) {
+                onDelete(achievement)
+              }
+            }}
+            className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-gray-400 transition hover:border-red-400/60 hover:text-red-400"
+            aria-label={`Delete ${achievement.title}`}
+          >
+            <FiTrash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       <p className="mt-4 text-xs text-gray-400">{achievement.date}</p>
       {achievement.takeaway ? (
@@ -153,6 +173,9 @@ export default function AdminPage() {
   const [newCategory, setNewCategory] = useState('')
   const [activeTab, setActiveTab] = useState<AchievementKind>('certificate')
 
+  const makeKey = (achievement: Achievement) =>
+    [achievement.kind, achievement.title, achievement.issuer, achievement.date].join('::')
+
   useEffect(() => {
     if (!categories.includes(form.category)) {
       setForm((prev) => ({ ...prev, category: categories[0] ?? 'General' }))
@@ -160,6 +183,15 @@ export default function AdminPage() {
   }, [categories, form.category])
 
   const previewItems = activeTab === 'certificate' ? certifications : badges
+
+  const handleDelete = (achievement: Achievement) => {
+    if (achievement.kind === 'certificate') {
+      setCertifications((prev) => prev.filter((item) => makeKey(item) !== makeKey(achievement)))
+      return
+    }
+
+    setBadges((prev) => prev.filter((item) => makeKey(item) !== makeKey(achievement)))
+  }
 
   const addCategory = () => {
     const value = newCategory.trim()
@@ -473,7 +505,11 @@ export default function AdminPage() {
               <motion.div layout className="grid gap-4 md:grid-cols-2">
                 <AnimatePresence>
                   {previewItems.map((achievement) => (
-                    <PreviewCard key={`${achievement.title}-${achievement.date}`} achievement={achievement} />
+                    <PreviewCard
+                      key={`${achievement.title}-${achievement.date}`}
+                      achievement={achievement}
+                      onDelete={handleDelete}
+                    />
                   ))}
                 </AnimatePresence>
               </motion.div>
