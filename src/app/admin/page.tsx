@@ -121,15 +121,15 @@ const PreviewCard = ({
       layout
       className="rounded-lg border border-white/10 bg-white/[0.03] p-4 shadow-lg"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex-1">
           <p className="text-xs uppercase tracking-wide text-primary">{achievement.category}</p>
           <h3 className="mt-1 text-lg font-semibold text-white">{achievement.title}</h3>
           <p className="text-xs text-gray-400">{achievement.issuer}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end gap-2 self-end sm:flex-row sm:items-center sm:justify-end sm:gap-3">
           <span
-            className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-wide ${
+            className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide leading-none ${
               isUpcoming
                 ? 'border border-primary/40 text-primary/80'
                 : 'border border-emerald-400/40 text-emerald-300'
@@ -144,7 +144,7 @@ const PreviewCard = ({
                 onDelete(achievement)
               }
             }}
-            className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-gray-400 transition hover:border-red-400/60 hover:text-red-400"
+            className="inline-flex shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] p-2 text-gray-400 transition hover:border-red-400/60 hover:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400 focus-visible:ring-0 sm:relative sm:z-10"
             aria-label={`Delete ${achievement.title}`}
           >
             <FiTrash2 className="h-4 w-4" />
