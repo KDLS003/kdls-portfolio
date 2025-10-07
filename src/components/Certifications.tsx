@@ -1,315 +1,265 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { FiAward, FiExternalLink, FiFileText } from 'react-icons/fi'
-import { fadeIn, staggerContainer } from '../lib/animations'
-import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
+import { fadeIn, staggerContainer } from '../lib/animations'
+import {
+  Achievement,
+  badgeData,
+  certificateData,
+} from '../lib/achievements'
 
-interface Certification {
-  title: string
-  issuer: string
-  date: string
-  type: 'completed'
-  imageUrl: string
-  previewUrl: string
-  credentialUrl: string
-  pdfUrl: string
-  category: 'Foundational' | 'Networking' | 'Emerging Tech'
-  takeaway: string
-  verificationNote?: string
+const cardVariants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0 },
 }
 
-const certifications: Certification[] = [
-  {
-    title: 'CompTIA IT Fundamentals+',
-    issuer: 'CompTIA',
-    date: 'May 30, 2023',
-    type: 'completed',
-    imageUrl: '/images/Comptia.png',
-    previewUrl: '/images/preview/comptiaCert.png',
-    credentialUrl: 'https://www.credly.com/badges/36adc4b9-65c8-4355-9998-b9ef00f8219a',
-    pdfUrl: '/certifications/CompTIA IT Fundamentals (ITF+) Certification certificate.pdf',
-    category: 'Foundational',
-    takeaway: 'Grounded my security journey with hardware, networking, and troubleshooting fundamentals.',
-  },
-  {
-    title: 'English for IT 1',
-    issuer: 'Cisco',
-    date: 'April 01, 2025',
-    type: 'completed',
-    imageUrl: '/images/EnglishForit.png',
-    previewUrl: '/images/preview/englishForIT.png',
-    credentialUrl: 'https://www.credly.com/badges/6a7b0e9e-6f25-4352-97a8-542f9f5f8b1a',
-    pdfUrl: '/certifications/EnglishforIT1Update20250611-27-q382nw.pdf',
-    category: 'Foundational',
-    takeaway: 'Strengthened technical communication for cross-functional collaboration and documentation.',
-  },
-  {
-    title: 'Introduction to Modern AI',
-    issuer: 'Cisco',
-    date: 'June 10, 2025',
-    type: 'completed',
-    imageUrl: '/images/introToModernAI.png',
-    previewUrl: '/images/preview/modernAI.png',
-    credentialUrl: 'https://www.credly.com/badges/aeacf824-5ad5-489a-9bd4-34bbf8c38efd',
-    pdfUrl: '/certifications/IntrotoModernAIUpdate20250611-27-bogmyn.pdf',
-    category: 'Emerging Tech',
-    takeaway: 'Explored how machine learning can augment threat detection and triage workflows.',
-  },
-  {
-    title: 'CCNA: Introduction to Networks',
-    issuer: 'Cisco',
-    date: 'May 2024',
-    type: 'completed',
-    imageUrl: '',
-    previewUrl: '/images/preview/CCNAIntroductiontoNetworks.png',
-    pdfUrl: '/certifications/CCNA-_Introduction_to_Networks_certificate_kennethsantos003-gmail-com_29aaa4d9-c480-4df2-8a7f-13c33c88bf3c.pdf',
-    credentialUrl: '',
-    category: 'Networking',
-    takeaway: 'Mapped out routing and switching concepts that inform my incident response runbooks.',
-    verificationNote: 'Verification available on request.',
-  },
-  {
-    title: 'CCNA: Switching, Routing, and Wireless Essentials',
-    issuer: 'Cisco',
-    date: 'November 2024',
-    type: 'completed',
-    imageUrl: '',
-    previewUrl: '/images/preview/CCNASwitching,Routing,andWirelessEssentials.png',
-    pdfUrl: '/certifications/CCNA-_Switching-_Routing-_and_Wireless_Essentials_certificate_kennethsantos003-gmail-com_1bcc32cb-2101-4a1e-a56f-cc290772f2f5.pdf',
-    credentialUrl: '',
-    category: 'Networking',
-    takeaway: 'Deepened my understanding of wireless architectures that inspired the WiFi Sentinel toolkit roadmap.',
-    verificationNote: 'Verification available on request.',
-  }
-]
+const AchievementCard = ({ achievement }: { achievement: Achievement }) => {
+  const isUpcoming = achievement.status === 'upcoming'
+  const hasPreview = Boolean(achievement.previewUrl)
+
+  return (
+    <motion.article
+      layout
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      exit={{ opacity: 0, y: 16 }}
+      className={`card group relative flex h-full flex-col border transition-colors ${
+        isUpcoming
+          ? 'border-dashed border-primary/40 bg-dark/40'
+          : 'border-transparent hover:border-primary/50'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <span
+          className={`px-2 py-1 text-[11px] uppercase tracking-wider rounded-full ${
+            isUpcoming
+              ? 'border border-primary/40 text-primary/80'
+              : 'border border-primary/40 text-primary/90'
+          }`}
+        >
+          {achievement.category}
+        </span>
+        <div className="flex items-center gap-2 text-primary">
+          <FiAward className="w-5 h-5 sm:w-6 sm:h-6" />
+          <p className="text-gray-400 text-xs sm:text-sm">{achievement.issuer}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+          {achievement.imageUrl && achievement.status === 'earned' ? (
+            <div className="relative h-8 w-8">
+              <Image
+                src={achievement.imageUrl}
+                alt={`${achievement.title} badge`}
+                fill
+                className="object-contain"
+                loading="lazy"
+              />
+            </div>
+          ) : (
+            <FiAward className="h-5 w-5" />
+          )}
+        </div>
+        <div>
+          <h3 className="text-lg sm:text-xl font-semibold text-white">{achievement.title}</h3>
+          <p className="text-xs text-gray-400 sm:text-sm">
+            {isUpcoming ? 'Details will be added soon.' : achievement.kind === 'badge' ? 'Digital badge' : 'Certification'}
+          </p>
+        </div>
+      </div>
+      <div className="mb-4 flex h-40 w-full items-center justify-center overflow-hidden rounded-lg bg-white/5 sm:h-48 md:h-56">
+        {hasPreview ? (
+          <div className="relative h-full w-full">
+            <Image
+              src={achievement.previewUrl!}
+              alt={`${achievement.title} preview`}
+              fill
+              className="object-cover"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-gray-400">
+            <FiAward className="h-8 w-8 text-primary/60" />
+            <span className="text-sm">Preview coming soon</span>
+          </div>
+        )}
+      </div>
+      {achievement.takeaway && (
+        <p className="text-gray-400 text-sm leading-relaxed">{achievement.takeaway}</p>
+      )}
+      <div className="mt-6 flex items-center justify-between text-xs text-gray-400 sm:text-sm">
+        <span>{achievement.date}</span>
+        {achievement.status === 'earned' ? (
+          achievement.credentialUrl ? (
+            <motion.a
+              href={achievement.credentialUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:text-secondary"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiExternalLink className="h-5 w-5" />
+            </motion.a>
+          ) : achievement.pdfUrl ? (
+            <motion.a
+              href={achievement.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:text-secondary"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiFileText className="h-5 w-5" />
+            </motion.a>
+          ) : achievement.verificationNote ? (
+            <span className="uppercase tracking-wider text-[11px]">{achievement.verificationNote}</span>
+          ) : null
+        ) : (
+          <span className="uppercase tracking-wider text-[11px] text-primary/70">In progress</span>
+        )}
+      </div>
+    </motion.article>
+  )
+}
+
+const AchievementSection = ({
+  title,
+  description,
+  items,
+}: {
+  title: string
+  description: string
+  items: Achievement[]
+}) => {
+  const categories = useMemo(
+    () => ['All', ...Array.from(new Set(items.map((item) => item.category)))],
+    [items],
+  )
+  const [selectedCategory, setSelectedCategory] = useState<string>(categories[0])
+
+  useEffect(() => {
+    if (!categories.includes(selectedCategory)) {
+      setSelectedCategory(categories[0])
+    }
+  }, [categories, selectedCategory])
+
+  const filteredItems = useMemo(
+    () =>
+      selectedCategory === 'All'
+        ? items
+        : items.filter((achievement) => achievement.category === selectedCategory),
+    [items, selectedCategory],
+  )
+
+  return (
+    <section className="mb-12 sm:mb-16">
+      <motion.div
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={fadeIn}
+        className="mb-6 text-center"
+      >
+        <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white">{title}</h3>
+        <p className="mt-2 text-sm text-gray-400 sm:text-base">{description}</p>
+      </motion.div>
+
+      <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
+        {categories.map((category) => {
+          const isActive = category === selectedCategory
+
+          return (
+            <motion.button
+              key={category}
+              type="button"
+              onClick={() => setSelectedCategory(category)}
+              className={`rounded-full border px-4 py-2 text-xs font-medium uppercase tracking-wide transition-colors sm:text-sm ${
+                isActive
+                  ? 'border-primary bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.35)]'
+                  : 'border-white/10 bg-dark text-gray-300 hover:border-primary/50 hover:text-primary'
+              }`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              aria-pressed={isActive}
+            >
+              {category}
+            </motion.button>
+          )
+        })}
+      </div>
+
+      <motion.div
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={staggerContainer}
+      >
+        {filteredItems.length > 0 ? (
+          <div className="grid gap-6 sm:gap-8 md:grid-cols-2 xl:grid-cols-3">
+            <AnimatePresence mode="popLayout">
+              {filteredItems.map((achievement) => (
+                <AchievementCard key={achievement.title} achievement={achievement} />
+              ))}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-white/10 bg-dark/60 p-6 text-center text-sm text-gray-400 sm:p-8 sm:text-base">
+            No achievements in this category yet—check back soon!
+          </div>
+        )}
+      </motion.div>
+    </section>
+  )
+}
 
 export default function Certifications() {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [isHovered, setIsHovered] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
-  const [startX, setStartX] = useState(0)
-  const [scrollLeft, setScrollLeft] = useState(0)
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true)
-    setStartX(e.pageX - scrollRef.current!.offsetLeft)
-    setScrollLeft(scrollRef.current!.scrollLeft)
-  }
-
-  const handleMouseUp = () => {
-    setIsDragging(false)
-  }
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return
-    e.preventDefault()
-    const x = e.pageX - scrollRef.current!.offsetLeft
-    const walk = (x - startX) * 2
-    scrollRef.current!.scrollLeft = scrollLeft - walk
-  }
-
-  // Double the certifications array for seamless looping
-  const loopedCertifications = [...certifications, ...certifications]
-
   return (
     <section id="certifications" className="section bg-dark-lighter">
       <div className="container px-4 sm:px-6 lg:px-8">
         <motion.div
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true }}
+          viewport={{ once: true, amount: 0.3 }}
           variants={fadeIn}
-          className="text-center mb-8 sm:mb-16"
+          className="text-center mb-10 sm:mb-14"
         >
-          <h2 className="heading text-2xl sm:text-3xl md:text-4xl lg:text-5xl">Certifications</h2>
+          <h2 className="heading text-2xl sm:text-3xl md:text-4xl lg:text-5xl">Certifications & Badges</h2>
           <p className="text-gray-300 max-w-3xl mx-auto text-sm sm:text-base">
-            Professional certifications and badges demonstrating expertise in various
-            cybersecurity domains and technologies.
+            Professional milestones organised for clarity—dive into earned certifications and explore digital badges at a glance.
           </p>
         </motion.div>
 
-        <div className="relative">
-          <motion.div
-            ref={scrollRef}
-            className="overflow-x-auto pb-4 hide-scrollbar"
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => {
-              setIsHovered(false)
-              setIsDragging(false)
-            }}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-            onTouchStart={() => setIsHovered(true)}
-            onTouchEnd={() => setIsHovered(false)}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={staggerContainer}
-          >
-            <div
-              className={`flex gap-4 sm:gap-6 lg:gap-8 px-2 sm:px-4 transition-all duration-300 ${!isDragging && !isHovered ? 'animate-scroll' : 'hover-pause'}`}
-            >
-              {loopedCertifications.map((cert, index) => (
-                <motion.div
-                  key={`${cert.title}-${index}`}
-                  variants={fadeIn}
-                  className="card group hover:border-primary/50 border border-transparent relative w-[280px] sm:w-[320px] md:w-[350px] shrink-0"
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
-                  {cert.type === 'completed' && (
-                    <div className="absolute top-2 sm:top-4 right-2 sm:right-4 flex flex-col items-center gap-2 z-10">
-                      <a href={cert.pdfUrl} target="_blank" rel="noopener noreferrer" title="View PDF">
-                        <FiFileText className="text-cyan-400 hover:text-cyan-300 w-5 h-5 sm:w-6 sm:h-6" />
-                      </a>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between gap-4 mb-3 sm:mb-4">
-                    <span className="px-2 py-1 text-[11px] uppercase tracking-wider rounded-full border border-primary/40 text-primary/90">
-                      {cert.category}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <div className="text-primary">
-                        <FiAward size={20} className="sm:w-6 sm:h-6" />
-                      </div>
-                      <p className="text-gray-400 text-xs sm:text-sm">{cert.issuer}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-4 mb-3 sm:mb-4 min-h-[70px] sm:min-h-[80px]">
-                    <div className="text-primary">
-                      {cert.imageUrl ? null : <FiAward size={20} className="sm:w-6 sm:h-6" />}
-                    </div>
-                    <div className="flex flex-col items-start gap-2">
-                      <h3 className="text-lg sm:text-xl font-semibold">{cert.title}</h3>
-                      {cert.type === 'completed' && cert.imageUrl ? (
-                        <div className="relative w-6 h-6 sm:w-8 sm:h-8">
-                          <Image
-                            src={cert.imageUrl}
-                            alt={`${cert.title} badge`}
-                            fill
-                            className="object-contain opacity-75"
-                            loading="lazy"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <FiAward className="w-3 h-3 sm:w-4 sm:h-4 text-primary/50" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className={`w-full h-40 sm:h-48 md:h-56 rounded-lg mb-3 sm:mb-4 overflow-hidden flex items-center justify-center bg-white`}>
-                    <div className="relative w-full h-full">
-                      <Image
-                        src={cert.previewUrl}
-                        alt={cert.title + ' PDF Preview'}
-                        fill
-                        className="object-cover rounded-lg"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">{cert.takeaway}</p>
-                  <div className="flex items-center justify-between mt-4 sm:mt-6">
-                    <span className="text-xs sm:text-sm text-gray-400">{cert.date}</span>
-                    {cert.credentialUrl ? (
-                      <motion.a
-                        href={cert.credentialUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:text-secondary transition-colors"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <FiExternalLink size={16} className="sm:w-5 sm:h-5" />
-                      </motion.a>
-                    ) : (
-                      <span className="text-[11px] uppercase tracking-wider text-gray-500">
-                        {cert.verificationNote}
-                      </span>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-          <div className="absolute left-0 top-0 bottom-4 w-4 sm:w-8 bg-gradient-to-r from-dark-lighter to-transparent pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-4 w-4 sm:w-8 bg-gradient-to-l from-dark-lighter to-transparent pointer-events-none" />
-        </div>
+        <AchievementSection
+          title="Professional Certifications"
+          description="Accredited credentials backed by verifiable coursework and assessments."
+          items={certificateData}
+        />
 
-        <div className="text-center mt-6 sm:mt-8 text-gray-400 text-sm sm:text-base">
+        <AchievementSection
+          title="Digital Badges"
+          description="Micro-credentials highlighting specialised skills and ongoing learning initiatives."
+          items={badgeData}
+        />
+
+        <div className="text-center mt-10 sm:mt-12 text-gray-400 text-sm sm:text-base">
           Visit my{' '}
-          <a 
-            href="https://www.credly.com/users/kenneth-david-santos" 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href="https://www.credly.com/users/kenneth-david-santos"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-primary underline"
           >
             Credly profile
-          </a>
-          .
+          </a>{' '}
+          for the full list of achievements.
         </div>
       </div>
-
-      <style jsx global>{`
-        @keyframes scroll {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(calc(-280px * ${certifications.length} - 1rem * ${certifications.length}));
-          }
-        }
-
-        @media (min-width: 640px) {
-          @keyframes scroll {
-            0% {
-              transform: translateX(0);
-            }
-            100% {
-              transform: translateX(calc(-320px * ${certifications.length} - 1.5rem * ${certifications.length}));
-            }
-          }
-        }
-
-        @media (min-width: 768px) {
-          @keyframes scroll {
-            0% {
-              transform: translateX(0);
-            }
-            100% {
-              transform: translateX(calc(-350px * ${certifications.length} - 2rem * ${certifications.length}));
-            }
-          }
-        }
-
-        .animate-scroll {
-          animation: scroll 30s linear infinite;
-          will-change: transform;
-        }
-
-        .hover-pause {
-          transform: translateX(0);
-          transition: transform 0.3s ease-out;
-        }
-
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-
-        @media (max-width: 640px) {
-          .container {
-            padding-left: 1rem;
-            padding-right: 1rem;
-          }
-        }
-      `}</style>
     </section>
   )
-} 
+}
