@@ -66,8 +66,11 @@ export default function Hero() {
             <span>{displayed}</span>
             <span className="inline-block w-2 h-6 bg-primary animate-blink align-middle" style={{marginLeft: '2px'}}></span>
           </h2>
-          <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto md:mx-0">
-            I'm an aspiring cybersecurity professional who believes that curiosity is the best teacher. Eager to learn, willing to break, and committed to securing what matters most.
+          <p className="text-lg md:text-xl text-gray-200 mb-4 max-w-2xl mx-auto md:mx-0">
+            I help security-minded teams harden wireless networks and automate defensive playbooks with hands-on tooling tailored to academic and startup environments.
+          </p>
+          <p className="text-base md:text-lg text-gray-300 mb-8 max-w-2xl mx-auto md:mx-0">
+            I'm an aspiring cybersecurity professional who believes that curiosity is the best teacher—eager to learn, willing to break, and committed to securing what matters most.
           </p>
           {/* Tech stack icons */}
           <div className="flex gap-4 justify-center md:justify-start mt-6 mb-8">
@@ -90,8 +93,18 @@ export default function Hero() {
             >
               Contact Me
             </a>
+            <a
+              href="/resume/Kenneth-David-L-Santos-Resume.pdf"
+              className="btn border border-transparent bg-white/10 text-white hover:bg-primary hover:text-dark shadow-lg shadow-cyan-500/30"
+              download
+            >
+              Download Résumé
+            </a>
           </div>
-          <div className="flex gap-6 mt-12 justify-center md:justify-start">
+          <p className="text-sm md:text-base text-gray-400 mt-6 text-center md:text-left">
+            Based in Angeles City, Philippines (UTC+8) • Available for remote-friendly security roles and internships.
+          </p>
+          <div className="flex gap-6 mt-8 justify-center md:justify-start">
             <a
               href="https://github.com/KDLS003"
               target="_blank"

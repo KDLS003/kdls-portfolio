@@ -6,7 +6,21 @@ import { fadeIn, staggerContainer } from '../lib/animations'
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 
-const certifications = [
+interface Certification {
+  title: string
+  issuer: string
+  date: string
+  type: 'completed'
+  imageUrl: string
+  previewUrl: string
+  credentialUrl: string
+  pdfUrl: string
+  category: 'Foundational' | 'Networking' | 'Emerging Tech'
+  takeaway: string
+  verificationNote?: string
+}
+
+const certifications: Certification[] = [
   {
     title: 'CompTIA IT Fundamentals+',
     issuer: 'CompTIA',
@@ -15,7 +29,9 @@ const certifications = [
     imageUrl: '/images/Comptia.png',
     previewUrl: '/images/preview/comptiaCert.png',
     credentialUrl: 'https://www.credly.com/badges/36adc4b9-65c8-4355-9998-b9ef00f8219a',
-    pdfUrl: '/certifications/CompTIA IT Fundamentals (ITF+) Certification certificate.pdf'
+    pdfUrl: '/certifications/CompTIA IT Fundamentals (ITF+) Certification certificate.pdf',
+    category: 'Foundational',
+    takeaway: 'Grounded my security journey with hardware, networking, and troubleshooting fundamentals.',
   },
   {
     title: 'English for IT 1',
@@ -25,7 +41,9 @@ const certifications = [
     imageUrl: '/images/EnglishForit.png',
     previewUrl: '/images/preview/englishForIT.png',
     credentialUrl: 'https://www.credly.com/badges/6a7b0e9e-6f25-4352-97a8-542f9f5f8b1a',
-    pdfUrl: '/certifications/EnglishforIT1Update20250611-27-q382nw.pdf'
+    pdfUrl: '/certifications/EnglishforIT1Update20250611-27-q382nw.pdf',
+    category: 'Foundational',
+    takeaway: 'Strengthened technical communication for cross-functional collaboration and documentation.',
   },
   {
     title: 'Introduction to Modern AI',
@@ -35,7 +53,9 @@ const certifications = [
     imageUrl: '/images/introToModernAI.png',
     previewUrl: '/images/preview/modernAI.png',
     credentialUrl: 'https://www.credly.com/badges/aeacf824-5ad5-489a-9bd4-34bbf8c38efd',
-    pdfUrl: '/certifications/IntrotoModernAIUpdate20250611-27-bogmyn.pdf'
+    pdfUrl: '/certifications/IntrotoModernAIUpdate20250611-27-bogmyn.pdf',
+    category: 'Emerging Tech',
+    takeaway: 'Explored how machine learning can augment threat detection and triage workflows.',
   },
   {
     title: 'CCNA: Introduction to Networks',
@@ -45,7 +65,10 @@ const certifications = [
     imageUrl: '',
     previewUrl: '/images/preview/CCNAIntroductiontoNetworks.png',
     pdfUrl: '/certifications/CCNA-_Introduction_to_Networks_certificate_kennethsantos003-gmail-com_29aaa4d9-c480-4df2-8a7f-13c33c88bf3c.pdf',
-    credentialUrl: ''
+    credentialUrl: '',
+    category: 'Networking',
+    takeaway: 'Mapped out routing and switching concepts that inform my incident response runbooks.',
+    verificationNote: 'Verification available on request.',
   },
   {
     title: 'CCNA: Switching, Routing, and Wireless Essentials',
@@ -55,7 +78,10 @@ const certifications = [
     imageUrl: '',
     previewUrl: '/images/preview/CCNASwitching,Routing,andWirelessEssentials.png',
     pdfUrl: '/certifications/CCNA-_Switching-_Routing-_and_Wireless_Essentials_certificate_kennethsantos003-gmail-com_1bcc32cb-2101-4a1e-a56f-cc290772f2f5.pdf',
-    credentialUrl: ''
+    credentialUrl: '',
+    category: 'Networking',
+    takeaway: 'Deepened my understanding of wireless architectures that inspired the WiFi Sentinel toolkit roadmap.',
+    verificationNote: 'Verification available on request.',
   }
 ]
 
@@ -140,30 +166,38 @@ export default function Certifications() {
                       </a>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 sm:gap-4 mb-3 sm:mb-4 min-h-[90px] sm:min-h-[110px]">
-                    <div className="text-primary">
-                      <FiAward size={20} className="sm:w-6 sm:h-6" />
-                    </div>
-                    <div className="flex flex-col items-start">
-                      <h3 className="text-lg sm:text-xl font-semibold">{cert.title}</h3>
-                      <div className="flex flex-row items-center gap-2 my-1">
-                        {cert.type === 'completed' && cert.imageUrl ? (
-                          <div className="relative w-6 h-6 sm:w-8 sm:h-8">
-                            <Image
-                              src={cert.imageUrl}
-                              alt={cert.title + ' Badge'}
-                              fill
-                              className="object-contain opacity-75"
-                              loading="lazy"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <FiAward className="w-3 h-3 sm:w-4 sm:h-4 text-primary/50" />
-                          </div>
-                        )}
-                        <p className="text-gray-400 text-xs sm:text-sm">{cert.issuer}</p>
+                  <div className="flex items-center justify-between gap-4 mb-3 sm:mb-4">
+                    <span className="px-2 py-1 text-[11px] uppercase tracking-wider rounded-full border border-primary/40 text-primary/90">
+                      {cert.category}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className="text-primary">
+                        <FiAward size={20} className="sm:w-6 sm:h-6" />
                       </div>
+                      <p className="text-gray-400 text-xs sm:text-sm">{cert.issuer}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 sm:gap-4 mb-3 sm:mb-4 min-h-[70px] sm:min-h-[80px]">
+                    <div className="text-primary">
+                      {cert.imageUrl ? null : <FiAward size={20} className="sm:w-6 sm:h-6" />}
+                    </div>
+                    <div className="flex flex-col items-start gap-2">
+                      <h3 className="text-lg sm:text-xl font-semibold">{cert.title}</h3>
+                      {cert.type === 'completed' && cert.imageUrl ? (
+                        <div className="relative w-6 h-6 sm:w-8 sm:h-8">
+                          <Image
+                            src={cert.imageUrl}
+                            alt={`${cert.title} badge`}
+                            fill
+                            className="object-contain opacity-75"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <FiAward className="w-3 h-3 sm:w-4 sm:h-4 text-primary/50" />
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className={`w-full h-40 sm:h-48 md:h-56 rounded-lg mb-3 sm:mb-4 overflow-hidden flex items-center justify-center bg-white`}>
@@ -177,9 +211,10 @@ export default function Certifications() {
                       />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between mt-4 sm:mt-8">
+                  <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">{cert.takeaway}</p>
+                  <div className="flex items-center justify-between mt-4 sm:mt-6">
                     <span className="text-xs sm:text-sm text-gray-400">{cert.date}</span>
-                    {cert.credentialUrl && (
+                    {cert.credentialUrl ? (
                       <motion.a
                         href={cert.credentialUrl}
                         target="_blank"
@@ -190,6 +225,10 @@ export default function Certifications() {
                       >
                         <FiExternalLink size={16} className="sm:w-5 sm:h-5" />
                       </motion.a>
+                    ) : (
+                      <span className="text-[11px] uppercase tracking-wider text-gray-500">
+                        {cert.verificationNote}
+                      </span>
                     )}
                   </div>
                 </motion.div>

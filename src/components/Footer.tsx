@@ -45,7 +45,7 @@ export default function Footer() {
               <FiMail className="w-5 h-5 sm:w-6 sm:h-6" />
             </motion.a>
             <motion.a
-              href="/resume-placeholder.pdf"
+              href="/resume/Kenneth-David-L-Santos-Resume.pdf"
               download
               className="flex items-center gap-1 text-gray-400 hover:text-primary transition-colors ml-2 sm:ml-4 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-primary border border-transparent hover:border-primary bg-transparent text-sm sm:text-base"
               whileHover={{ scale: 1.08 }}
@@ -53,8 +53,8 @@ export default function Footer() {
               style={{ height: '32px' }}
             >
               <FiDownload className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="font-medium hidden sm:inline">Download my CV here!</span>
-              <span className="font-medium sm:hidden">Download CV</span>
+              <span className="font-medium hidden sm:inline">Download Résumé</span>
+              <span className="font-medium sm:hidden">Résumé</span>
               <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-1 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 13l-5 5m0 0l-5-5m5 5V6" />
               </svg>
