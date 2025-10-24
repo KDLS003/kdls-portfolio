@@ -193,6 +193,16 @@ export default function Certifications() {
                       <h4 className="mt-3 text-lg font-semibold text-white sm:text-xl">{badge.title}</h4>
                     </div>
                     <div className="relative flex grow items-center justify-center rounded-xl border border-white/10 bg-black/20 p-4">
+                      <div className="credly-badge-frame w-full max-w-[340px]">
+                        <div
+                          className="credly-badge block h-[340px] w-full"
+                          data-iframe-width="340"
+                          data-iframe-height="340"
+                          data-hide-footer="true"
+                        data-share-badge-id={badge.badgeId}
+                          data-share-badge-host="https://www.credly.com"
+                        />
+                      </div>
                       <div
                         className="credly-badge w-full max-w-[320px]"
                         data-iframe-width="320"
