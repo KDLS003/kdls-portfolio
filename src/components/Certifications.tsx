@@ -1,9 +1,13 @@
-'use client'
+"use client";
 
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { fadeIn } from '../lib/animations'
-import { credlyBadges, type CredlyCategory } from '../lib/credly'
+import { credlyBadges } from '../lib/credly'
+import type { CredlyCategory } from '../lib/credly'
+
+const MotionSection = motion.section;
+const MotionArticle = motion.article;
 
 const sections = [
   {
@@ -78,7 +82,7 @@ export default function Certifications() {
           const items = credlyBadges.filter((badge) => badge.category === section.filter)
 
           return (
-            <motion.section
+            <MotionSection
               key={section.title}
               initial="hidden"
               whileInView="visible"
@@ -96,7 +100,7 @@ export default function Certifications() {
                   const badgeTitle = badge.title ?? 'Credly Badge'
 
                   return (
-                    <motion.article
+                    <MotionArticle
                       key={badge.badgeId}
                       variants={badgeCardVariants}
                       initial="hidden"
@@ -132,13 +136,13 @@ export default function Certifications() {
                       >
                         View on Credly
                       </a>
-                    </motion.article>
+                    </MotionArticle>
                   )
-                })
+                })}
               </div>
-            </motion.section>
+            </MotionSection>
           )
-        })
+        })}
 
         <div className="text-center text-gray-400 text-sm sm:text-base">
           For a comprehensive credential history, visit my{' '}
