@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -12,8 +12,8 @@ import {
 } from '../lib/credly'
 import type { CredlyCategory, CredlyEmbed } from '../lib/credly'
 
-const MotionSection = motion.section;
-const MotionArticle = motion.article;
+const MotionSection = motion.section
+const MotionArticle = motion.article
 
 const sections = [
   {
@@ -43,14 +43,18 @@ export default function Certifications() {
       const stored = readCredlyStorage()
 
       if (!stored) {
-        setBadgeItems((current) => (current === credlyBadges ? current : credlyBadges))
+        setBadgeItems((current) =>
+          current === credlyBadges ? current : credlyBadges,
+        )
         return
       }
 
       setBadgeItems((current) => {
         const merged = mergeCredlyLists(credlyBadges, stored)
         if (merged.length === current.length) {
-          const hasDifference = merged.some((item, index) => item.badgeId !== current[index]?.badgeId)
+          const hasDifference = merged.some(
+            (item, index) => item.badgeId !== current[index]?.badgeId,
+          )
           if (!hasDifference) return current
         }
         return merged
@@ -83,7 +87,9 @@ export default function Certifications() {
       window.Credly?.Tracker?.init?.()
     }
 
-    const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${scriptSrc}"]`)
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[src="${scriptSrc}"]`,
+    )
 
     if (existingScript) {
       if (window.Credly) {
@@ -128,15 +134,21 @@ export default function Certifications() {
           variants={fadeIn}
           className="mb-12 text-center"
         >
-          <h2 className="heading text-2xl sm:text-3xl md:text-4xl lg:text-5xl">Certifications &amp; Badges</h2>
+          <h2 className="heading text-2xl sm:text-3xl md:text-4xl lg:text-5xl">
+            Certifications &amp; Badges
+          </h2>
           <p className="text-gray-300 mx-auto mt-4 max-w-3xl text-sm sm:text-base">
-            Explore verifiable digital credentials issued via Credly. Each badge is embedded directly from the
-            issuing authority, ensuring authenticity while aligning with the site&apos;s polished presentation.
+            Explore verifiable digital credentials issued via Credly. Each badge
+            is embedded directly from the issuing authority, ensuring
+            authenticity while aligning with the site&apos;s polished
+            presentation.
           </p>
         </motion.div>
 
         {sections.map((section) => {
-          const items = badgeItems.filter((badge) => badge.category === section.filter)
+          const items = badgeItems.filter(
+            (badge) => badge.category === section.filter,
+          )
 
           return (
             <MotionSection
@@ -148,8 +160,12 @@ export default function Certifications() {
               className="mb-16"
             >
               <div className="mx-auto mb-8 max-w-3xl text-center">
-                <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white">{section.title}</h3>
-                <p className="mt-3 text-sm text-gray-400 sm:text-base">{section.description}</p>
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white">
+                  {section.title}
+                </h3>
+                <p className="mt-3 text-sm text-gray-400 sm:text-base">
+                  {section.description}
+                </p>
               </div>
 
               <div className="grid gap-6 sm:gap-8 md:grid-cols-2 xl:grid-cols-3">
@@ -167,9 +183,13 @@ export default function Certifications() {
                     >
                       <div>
                         {badge.issuer ? (
-                          <p className="text-xs uppercase tracking-[0.3em] text-primary/70">{badge.issuer}</p>
+                          <p className="text-xs uppercase tracking-[0.3em] text-primary/70">
+                            {badge.issuer}
+                          </p>
                         ) : null}
-                        <h4 className="mt-3 text-lg font-semibold text-white sm:text-xl">{badgeTitle}</h4>
+                        <h4 className="mt-3 text-lg font-semibold text-white sm:text-xl">
+                          {badgeTitle}
+                        </h4>
                       </div>
                       <div className="relative flex grow items-center justify-center rounded-xl border border-white/10 bg-black/20 p-4">
                         <div className="credly-badge-frame w-full max-w-[340px]">
@@ -182,7 +202,10 @@ export default function Certifications() {
                             data-share-badge-id={badge.badgeId}
                             data-share-badge-host="https://www.credly.com"
                           />
-                          <span className="credly-badge-overlay" aria-hidden="true" />
+                          <span
+                            className="credly-badge-overlay"
+                            aria-hidden="true"
+                          />
                         </div>
                       </div>
                       <a
