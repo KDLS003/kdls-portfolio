@@ -193,15 +193,17 @@ export default function Certifications() {
                       <h4 className="mt-3 text-lg font-semibold text-white sm:text-xl">{badge.title}</h4>
                     </div>
                     <div className="relative flex grow items-center justify-center rounded-xl border border-white/10 bg-black/20 p-4">
-                      <div className="credly-badge-frame w-full max-w-[340px]">
+                      <div className="relative w-full max-w-[340px] overflow-hidden rounded-[18px] border border-white/12 bg-gradient-to-b from-white/5 via-dark/40 to-dark/70 shadow-xl shadow-black/30 transition duration-300 group-hover:border-primary/50 group-hover:shadow-primary/25">
                         <div
                           className="credly-badge block h-[340px] w-full"
                           data-iframe-width="340"
                           data-iframe-height="340"
                           data-hide-footer="true"
-                        data-share-badge-id={badge.badgeId}
+                          data-share-badge-id={badge.badgeId}
                           data-share-badge-host="https://www.credly.com"
                         />
+                        <div className="pointer-events-none absolute inset-0 rounded-[18px] ring-1 ring-inset ring-white/8" aria-hidden />
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 rounded-b-[18px] bg-gradient-to-b from-transparent via-dark/60 to-dark/95" aria-hidden />
                       </div>
                     </div>
                     <a
