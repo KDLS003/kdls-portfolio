@@ -203,6 +203,13 @@ export default function Certifications() {
                           data-share-badge-host="https://www.credly.com"
                         />
                       </div>
+                      <div
+                        className="credly-badge w-full max-w-[320px]"
+                        data-iframe-width="320"
+                        data-iframe-height="320"
+                        data-share-badge-id={badge.badgeId}
+                        data-share-badge-host="https://www.credly.com"
+                      />
                     </div>
                     <a
                       href={`https://www.credly.com/badges/${badge.badgeId}`}
