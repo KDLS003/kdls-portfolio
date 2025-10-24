@@ -36,14 +36,26 @@ const isCredlyEmbed = (value: unknown): value is CredlyEmbed => {
 const sanitizeCredlyEmbeds = (items: unknown): CredlyEmbed[] => {
   if (!Array.isArray(items)) return []
 
-  return items.filter(isCredlyEmbed)
+  const deduped: CredlyEmbed[] = []
+  const seen = new Set<string>()
+
+  for (const item of items) {
+    if (!isCredlyEmbed(item)) continue
+
+    if (seen.has(item.badgeId)) continue
+    seen.add(item.badgeId)
+
+    deduped.push(item)
+  }
+
+  return deduped
 }
 
 export const mergeCredlyLists = (
   base: CredlyEmbed[],
   overrides: CredlyEmbed[] | null,
 ): CredlyEmbed[] => {
-  if (!overrides) return base
+  if (!overrides?.length) return base
 
   const seen = new Set<string>()
   const merged: CredlyEmbed[] = []
@@ -51,6 +63,11 @@ export const mergeCredlyLists = (
   for (const item of overrides) {
     if (seen.has(item.badgeId)) continue
     seen.add(item.badgeId)
+    merged.push(item)
+  }
+
+  for (const item of base) {
+    if (seen.has(item.badgeId)) continue
     merged.push(item)
   }
 
