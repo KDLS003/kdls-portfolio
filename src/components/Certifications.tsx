@@ -199,7 +199,7 @@ export default function Certifications() {
                           data-iframe-width="340"
                           data-iframe-height="340"
                           data-hide-footer="true"
-                        data-share-badge-id={badge.badgeId}
+                          data-share-badge-id={badge.badgeId}
                           data-share-badge-host="https://www.credly.com"
                         />
                       </div>
@@ -207,6 +207,7 @@ export default function Certifications() {
                         className="credly-badge w-full max-w-[320px]"
                         data-iframe-width="320"
                         data-iframe-height="320"
+                        data-hide-footer="true"
                         data-share-badge-id={badge.badgeId}
                         data-share-badge-host="https://www.credly.com"
                       />
