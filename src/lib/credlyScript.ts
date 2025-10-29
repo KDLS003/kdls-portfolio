@@ -118,7 +118,9 @@ export const verifyCredlyEmbedPresence = async (
       const containerWithIframe = containers.some((element) => element.tagName === 'IFRAME' || !!element.querySelector('iframe'))
 
       if (shouldExist) {
-        if (iframeBySrc || iframeByAttr || containerWithIframe) {
+        const hasContainer = containers.length > 0
+
+        if (iframeBySrc || iframeByAttr || containerWithIframe || hasContainer) {
           resolve(true)
           return
         }
