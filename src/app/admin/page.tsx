@@ -1,874 +1,432 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { FiAward, FiLayers, FiPlusCircle, FiRefreshCcw, FiTrash2 } from 'react-icons/fi'
+import { useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 import Link from 'next/link'
 import {
-  Achievement,
-  AchievementKind,
-  AchievementStatus,
-  badgeData,
-  certificateData,
-  defaultCategories,
-} from '../../lib/achievements'
-import { credlyBadges, type CredlyCategory, type CredlyEmbed } from '../../lib/credly'
+  FiAlertTriangle,
+  FiArrowLeft,
+  FiCheckCircle,
+  FiInfo,
+  FiPlusCircle,
+  FiTrash2,
+} from 'react-icons/fi'
+import type { IconType } from 'react-icons'
+import {
+  CUSTOM_CREDLY_STORAGE_KEY,
+  credlyBadges,
+  loadStoredCredlyEmbeds,
+  parseCredlyEmbedCode,
+  saveStoredCredlyEmbeds,
+  sortStoredCredlyEmbeds,
+  type CredlyCategory,
+  type StoredCredlyEmbed,
+} from '../../lib/credly'
+import {
+  ensureCredlyScript,
+  reinitializeCredlyEmbeds,
+  verifyCredlyEmbedPresence,
+  waitForNextFrame,
+} from '../../lib/credlyScript'
 
-interface AchievementForm extends Omit<Achievement, 'kind'> {
-  kind: AchievementKind
-}
-
-const initialFormState: AchievementForm = {
-  kind: 'certificate',
-  title: '',
-  issuer: '',
-  date: '',
-  status: 'earned',
-  category: defaultCategories[0] ?? 'General',
-  takeaway: '',
-  imageUrl: '',
-  previewUrl: '',
-  credentialUrl: '',
-  pdfUrl: '',
-  verificationNote: '',
-}
-
-const statusOptions: { label: string; value: AchievementStatus; helper: string }[] = [
+const categories: { value: CredlyCategory; label: string; helper: string }[] = [
   {
-    label: 'Earned',
-    value: 'earned',
-    helper: 'Use for certifications and badges that are fully complete and verifiable.',
-  },
-  {
-    label: 'Upcoming',
-    value: 'upcoming',
-    helper: 'Reserve space for milestones that are in progress or planned.',
-  },
-]
-
-const tabCopy: Record<AchievementKind, { title: string; helper: string }> = {
-  certificate: {
-    title: 'Certifications',
-    helper: 'Track accredited certifications, bootcamps, or intensive courses.',
-  },
-  badge: {
-    title: 'Badges',
-    helper: 'Capture micro-credentials and lightweight recognitions.',
-  },
-}
-
-const credlyCategoryOptions: { label: string; value: CredlyCategory }[] = [
-  {
-    label: 'Professional Certifications',
     value: 'certification',
+    label: 'Professional Certifications',
+    helper:
+      'Accredited certifications and intensive programmes. These surface in the main Certifications section.',
   },
   {
-    label: 'Digital Badges & Challenges',
     value: 'badge',
+    label: 'Digital Badges & Challenges',
+    helper:
+      'Short-form achievements, competitions, and micro-credentials. These appear in the Badges section.',
   },
 ]
 
-const credlyCategoryDescriptions: Record<CredlyCategory, string> = {
-  certification: 'Full-length credentials and assessments that validate in-depth skill mastery.',
-  badge: 'Micro-credentials, community challenges, and short-form achievements that show continued learning.',
+const sectionDescriptions: Record<CredlyCategory, string> = {
+  certification:
+    'Embed professional and career-aligned certifications. Paste the exact embed snippet from Credly and the system will handle the rest.',
+  badge:
+    'Add micro-credentials, challenges, and smaller recognitions. Each embed keeps the portfolio styling intact.',
 }
 
-const credlyScriptSrc = 'https://cdn.credly.com/assets/utilities/embed.js'
+type StatusVariant = 'success' | 'error' | 'info'
 
-interface CredlyFormState {
-  rawInput: string
-  badgeId: string
-  category: CredlyCategory
-  title: string
-  issuer: string
+type StatusState = {
+  type: StatusVariant
+  message: string
+} | null
+
+const statusIconMap: Record<StatusVariant, IconType> = {
+  success: FiCheckCircle,
+  error: FiAlertTriangle,
+  info: FiInfo,
 }
 
-const initialCredlyForm: CredlyFormState = {
-  rawInput: '',
-  badgeId: '',
-  category: 'certification',
-  title: '',
-  issuer: '',
+const formatDateTime = (value: string) => {
+  try {
+    const formatter = new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+
+    return formatter.format(new Date(value))
+  } catch (error) {
+    console.error('Failed to format date', error)
+    return value
+  }
 }
 
-const extractCredlyBadgeId = (value: string) => {
-  const pattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
-  const match = value.match(pattern)
-
-  return match?.[0] ?? ''
-}
-
-const FieldLabel = ({ label, helper }: { label: string; helper?: string }) => (
-  <div className="flex flex-col gap-1">
-    <span className="text-sm font-medium text-white">{label}</span>
-    {helper ? <span className="text-xs text-gray-400">{helper}</span> : null}
+const createCredlyBadgeElement = (badge: { badgeId: string }) => (
+  <div className="credly-badge-frame w-full max-w-[340px]">
+    <div
+      className="credly-badge block h-[340px] w-full"
+      data-iframe-width="340"
+      data-iframe-height="340"
+      data-hide-footer="true"
+      data-hide-share="true"
+      data-share-badge-id={badge.badgeId}
+      data-share-badge-host="https://www.credly.com"
+    />
+    <span className="credly-badge-overlay" aria-hidden="true" />
   </div>
 )
 
-const Input = ({
-  className,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement>) => (
-  <input
-    {...props}
-    className={`w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 ${className ?? ''}`.trim()}
-  />
-)
-
-const TextArea = ({
-  className,
-  ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
-  <textarea
-    {...props}
-    className={`w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 ${className ?? ''}`.trim()}
-  />
-)
-
-const TabButton = ({
-  isActive,
-  children,
-  onClick,
-}: {
-  isActive: boolean
-  children: React.ReactNode
-  onClick: () => void
-}) => (
-  <motion.button
-    type="button"
-    onClick={onClick}
-    className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm uppercase tracking-wide transition-colors ${
-      isActive
-        ? 'border-primary bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.35)]'
-        : 'border-white/10 bg-dark text-gray-300 hover:border-primary/50 hover:text-primary'
-    }`}
-    whileHover={{ scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
-  >
-    {children}
-  </motion.button>
-)
-
-const PreviewCard = ({
-  achievement,
-  onDelete,
-}: {
-  achievement: Achievement
-  onDelete: (achievement: Achievement) => void
-}) => {
-  const isUpcoming = achievement.status === 'upcoming'
-
-  return (
-    <motion.article
-      layout
-      className="rounded-lg border border-white/10 bg-white/[0.03] p-4 shadow-lg"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex-1">
-          <p className="text-xs uppercase tracking-wide text-primary">{achievement.category}</p>
-          <h3 className="mt-1 text-lg font-semibold text-white">{achievement.title}</h3>
-          <p className="text-xs text-gray-400">{achievement.issuer}</p>
-        </div>
-        <div className="flex flex-col items-end gap-2 self-end sm:flex-row sm:items-center sm:justify-end sm:gap-3">
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide leading-none ${
-              isUpcoming
-                ? 'border border-primary/40 text-primary/80'
-                : 'border border-emerald-400/40 text-emerald-300'
-            }`}
-          >
-            {isUpcoming ? 'Upcoming' : 'Earned'}
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm(`Remove ${achievement.title}? This only updates the preview list.`)) {
-                onDelete(achievement)
-              }
-            }}
-            className="inline-flex shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] p-2 text-gray-400 transition hover:border-red-400/60 hover:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400 focus-visible:ring-0 sm:relative sm:z-10"
-            aria-label={`Delete ${achievement.title}`}
-          >
-            <FiTrash2 className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-      <p className="mt-4 text-xs text-gray-400">{achievement.date}</p>
-      {achievement.takeaway ? (
-        <p className="mt-3 text-sm text-gray-300">{achievement.takeaway}</p>
-      ) : null}
-      <div className="mt-4 flex flex-wrap gap-3 text-[11px] uppercase tracking-wide text-gray-500">
-        {achievement.previewUrl ? <span>Preview</span> : null}
-        {achievement.credentialUrl ? <span>Credential Link</span> : null}
-        {achievement.pdfUrl ? <span>PDF</span> : null}
-        {achievement.verificationNote ? <span>Verification Note</span> : null}
-      </div>
-    </motion.article>
-  )
-}
-
 export default function AdminPage() {
-  const [form, setForm] = useState<AchievementForm>(initialFormState)
-  const [certifications, setCertifications] = useState<Achievement[]>(certificateData)
-  const [badges, setBadges] = useState<Achievement[]>(badgeData)
-  const [categories, setCategories] = useState<string[]>(defaultCategories)
-  const [newCategory, setNewCategory] = useState('')
-  const [activeTab, setActiveTab] = useState<AchievementKind>('certificate')
-  const [credlyItems, setCredlyItems] = useState<CredlyEmbed[]>(credlyBadges)
-  const [credlyForm, setCredlyForm] = useState<CredlyFormState>(initialCredlyForm)
-  const [credlyError, setCredlyError] = useState<string | null>(null)
+  const [embedInput, setEmbedInput] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<CredlyCategory>('certification')
+  const [customBadges, setCustomBadges] = useState<StoredCredlyEmbed[]>([])
+  const [status, setStatus] = useState<StatusState>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
-  const makeKey = (achievement: Achievement) =>
-    [achievement.kind, achievement.title, achievement.issuer, achievement.date].join('::')
+  const defaultBadgeIds = useMemo(
+    () => new Set(credlyBadges.map((badge) => badge.badgeId)),
+    [],
+  )
 
   useEffect(() => {
-    const handleScriptLoad = () => {
-      window.Credly?.Tracker?.init?.()
-    }
-
-    const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${credlyScriptSrc}"]`)
-
-    if (existingScript) {
-      if (window.Credly) {
-        handleScriptLoad()
-      } else {
-        existingScript.addEventListener('load', handleScriptLoad)
-      }
-
-      return () => {
-        existingScript.removeEventListener('load', handleScriptLoad)
-      }
-    }
-
-    const script = document.createElement('script')
-    script.src = credlyScriptSrc
-    script.async = true
-    script.addEventListener('load', handleScriptLoad)
-    document.body.appendChild(script)
-
-    return () => {
-      script.removeEventListener('load', handleScriptLoad)
-    }
+    const stored = sortStoredCredlyEmbeds(loadStoredCredlyEmbeds())
+    setCustomBadges(stored)
   }, [])
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      window.Credly?.Tracker?.init?.()
-    }, 60)
-
-    return () => {
-      window.clearTimeout(timeout)
-    }
-  }, [credlyItems])
+    saveStoredCredlyEmbeds(customBadges)
+  }, [customBadges])
 
   useEffect(() => {
-    if (!categories.includes(form.category)) {
-      setForm((prev) => ({ ...prev, category: categories[0] ?? 'General' }))
+    ensureCredlyScript()
+      .then(() => {
+        reinitializeCredlyEmbeds()
+      })
+      .catch((error) => {
+        console.error('Failed to prepare Credly embeds', error)
+        setStatus({ type: 'error', message: 'Could not load the Credly embed script. Refresh and try again.' })
+      })
+  }, [])
+
+  useEffect(() => {
+    ensureCredlyScript()
+      .then(() => {
+        reinitializeCredlyEmbeds()
+      })
+      .catch((error) => {
+        console.error('Failed to refresh Credly embeds', error)
+      })
+  }, [customBadges])
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (!event.key || event.key !== CUSTOM_CREDLY_STORAGE_KEY) return
+
+      const stored = sortStoredCredlyEmbeds(loadStoredCredlyEmbeds())
+      setCustomBadges(stored)
     }
-  }, [categories, form.category])
 
-  const previewItems = activeTab === 'certificate' ? certifications : badges
+    window.addEventListener('storage', handleStorage)
 
-  const handleDelete = (achievement: Achievement) => {
-    if (achievement.kind === 'certificate') {
-      setCertifications((prev) => prev.filter((item) => makeKey(item) !== makeKey(achievement)))
-      return
+    return () => {
+      window.removeEventListener('storage', handleStorage)
     }
-
-    setBadges((prev) => prev.filter((item) => makeKey(item) !== makeKey(achievement)))
-  }
-
-  const addCategory = () => {
-    const value = newCategory.trim()
-    if (!value) return
-    if (!categories.some((cat) => cat.toLowerCase() === value.toLowerCase())) {
-      setCategories((prev) => [...prev, value])
-    }
-    setForm((prev) => ({ ...prev, category: value }))
-    setNewCategory('')
-  }
+  }, [])
 
   const resetForm = () => {
-    setForm((prev) => ({
-      ...initialFormState,
-      category: categories[0] ?? 'General',
-      kind: prev.kind,
-    }))
+    setEmbedInput('')
   }
 
-  const resetCredlyForm = () => {
-    setCredlyForm((prev) => ({
-      ...initialCredlyForm,
-      category: prev.category,
-    }))
-    setCredlyError(null)
-  }
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAddBadge = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const payload: Achievement = {
-      ...form,
-      takeaway: form.takeaway?.trim() ? form.takeaway : undefined,
-      imageUrl: form.imageUrl?.trim() ? form.imageUrl : undefined,
-      previewUrl: form.previewUrl?.trim() ? form.previewUrl : undefined,
-      credentialUrl: form.credentialUrl?.trim() ? form.credentialUrl : undefined,
-      pdfUrl: form.pdfUrl?.trim() ? form.pdfUrl : undefined,
-      verificationNote: form.verificationNote?.trim() ? form.verificationNote : undefined,
-    }
 
-    if (form.kind === 'certificate') {
-      setCertifications((prev) => [payload, ...prev])
-    } else {
-      setBadges((prev) => [payload, ...prev])
-    }
-
-    resetForm()
-    setActiveTab(form.kind)
-  }
-
-  const isUpcoming = form.status === 'upcoming'
-
-  const handleCredlyInputChange = (value: string) => {
-    const badgeId = extractCredlyBadgeId(value)
-
-    setCredlyForm((prev) => ({
-      ...prev,
-      rawInput: value,
-      badgeId,
-    }))
-
-    if (!value.trim()) {
-      setCredlyError(null)
+    if (!embedInput.trim()) {
+      setStatus({ type: 'error', message: 'Paste the embed code from Credly before submitting.' })
       return
     }
 
-    setCredlyError(badgeId ? null : 'Unable to find a Credly badge UUID in the provided snippet or URL.')
+    if (isProcessing) return
+
+    setIsProcessing(true)
+    setStatus({ type: 'info', message: 'Validating embed and loading preview…' })
+
+    try {
+      const parsed = parseCredlyEmbedCode(embedInput)
+
+      if (defaultBadgeIds.has(parsed.badgeId) || customBadges.some((badge) => badge.badgeId === parsed.badgeId)) {
+        throw new Error('This badge is already included in your portfolio.')
+      }
+
+      const newBadge: StoredCredlyEmbed = {
+        badgeId: parsed.badgeId,
+        category: selectedCategory,
+        createdAt: new Date().toISOString(),
+        ...(parsed.title ? { title: parsed.title } : {}),
+      }
+
+      setCustomBadges((previous) => sortStoredCredlyEmbeds([...previous, newBadge]))
+      await waitForNextFrame()
+      await ensureCredlyScript()
+      reinitializeCredlyEmbeds()
+
+      const verified = await verifyCredlyEmbedPresence(parsed.badgeId, { shouldExist: true })
+
+      if (!verified) {
+        setCustomBadges((previous) => previous.filter((badge) => badge.badgeId !== parsed.badgeId))
+        throw new Error('Unable to confirm that Credly loaded the embed. Double-check the code and try again.')
+      }
+
+      resetForm()
+      setStatus({ type: 'success', message: 'Badge added successfully and verified on the preview grid.' })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Something went wrong while adding the badge.'
+      setStatus({ type: 'error', message })
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
-  const handleCredlySubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const parsedBadgeId = credlyForm.badgeId || extractCredlyBadgeId(credlyForm.rawInput)
+  const handleDeleteBadge = async (badge: StoredCredlyEmbed) => {
+    if (isProcessing) return
 
-    if (!parsedBadgeId) {
-      setCredlyError('Provide a Credly embed snippet or public badge URL so we can detect the badge UUID.')
-      return
-    }
+    const confirmation = window.confirm(
+      `Remove "${badge.title ?? 'Credly Badge'}" from the custom list? This cannot be undone.`,
+    )
 
-    const payload: CredlyEmbed = {
-      badgeId: parsedBadgeId,
-      category: credlyForm.category,
-      title: credlyForm.title.trim() || undefined,
-      issuer: credlyForm.issuer.trim() || undefined,
-    }
+    if (!confirmation) return
 
-    setCredlyItems((prev) => {
-      const filtered = prev.filter((item) => item.badgeId !== parsedBadgeId)
-      return [payload, ...filtered]
+    setIsProcessing(true)
+    setStatus({ type: 'info', message: 'Removing badge and confirming updates…' })
+
+    setCustomBadges((previous) => previous.filter((item) => item.badgeId !== badge.badgeId))
+    await waitForNextFrame()
+    await ensureCredlyScript().catch((error) => {
+      console.error('Failed to reload Credly script after removal', error)
     })
+    reinitializeCredlyEmbeds()
 
-    setCredlyForm((prev) => ({
-      ...initialCredlyForm,
-      category: prev.category,
-    }))
-    setCredlyError(null)
-  }
+    const removed = await verifyCredlyEmbedPresence(badge.badgeId, { shouldExist: false })
 
-  const handleCredlyDelete = (badge: CredlyEmbed) => {
-    if (!window.confirm(`Remove badge ${badge.badgeId}? This only updates the preview list.`)) {
-      return
+    if (removed) {
+      setStatus({ type: 'success', message: 'Badge deleted. The main site will update automatically.' })
+    } else {
+      setStatus({ type: 'error', message: 'Badge removed locally, but verification timed out. Refresh to confirm.' })
     }
 
-    setCredlyItems((prev) => prev.filter((item) => item.badgeId !== badge.badgeId))
+    setIsProcessing(false)
+  }
+
+  const StatusMessage = () => {
+    if (!status) return null
+
+    const Icon = statusIconMap[status.type]
+
+    return (
+      <div
+        className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-sm transition ${
+          status.type === 'success'
+            ? 'border-emerald-400/60 bg-emerald-400/10 text-emerald-200'
+            : status.type === 'error'
+              ? 'border-red-400/60 bg-red-400/10 text-red-200'
+              : 'border-primary/40 bg-primary/10 text-primary'
+        }`}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="leading-relaxed">{status.message}</span>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-dark to-dark-lighter py-16">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 sm:px-6 lg:px-8">
-        <header className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center">
-          <div className="mx-auto flex max-w-2xl flex-col gap-4">
-            <div className="flex items-center justify-center gap-3 text-primary">
-              <FiLayers className="h-6 w-6" />
-              <span className="text-sm uppercase tracking-[0.4em] text-primary/80">
-                Admin Toolkit
-              </span>
+    <div className="min-h-screen bg-gradient-to-b from-dark via-dark/95 to-black text-white">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+        <header className="mb-12 flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-4">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-sm font-medium text-primary transition hover:text-secondary"
+            >
+              <FiArrowLeft className="h-4 w-4" /> Back to portfolio
+            </Link>
+            <div>
+              <h1 className="text-3xl font-semibold sm:text-4xl">Credential Manager</h1>
+              <p className="mt-2 max-w-2xl text-sm text-gray-300 sm:text-base">
+                Paste the embed code snippet provided by Credly to publish a badge instantly. Every addition updates the
+                home page while preserving the existing design.
+              </p>
             </div>
-            <h1 className="text-3xl font-semibold text-white sm:text-4xl">
-              Achievement Management Hub
-            </h1>
-            <p className="text-sm text-gray-400 sm:text-base">
-              This tucked-away dashboard lets you organise certifications and badges without exposing the controls publicly. Add new achievements, reserve upcoming slots, and keep categories tidy for the main portfolio page.
-            </p>
-            <div className="text-xs text-gray-500">
-              <span className="font-medium text-primary">Heads up:</span> This page is intentionally hidden from navigation. Bookmark it for quick access when you need to update your achievements.
-            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-gray-300 sm:max-w-xs">
+            <p className="font-semibold text-primary">Quick tips</p>
+            <ul className="mt-3 space-y-2 text-xs text-gray-400">
+              <li>Use the “Copy embed code” button on Credly, then paste it below.</li>
+              <li>The script will verify that Credly loaded the badge successfully.</li>
+              <li>You can remove badges at any time—the main site syncs automatically.</li>
+            </ul>
           </div>
         </header>
 
-        <section className="grid gap-8 lg:grid-cols-2">
-          <motion.form
-            layout
-            onSubmit={handleSubmit}
-            className="flex flex-col gap-6 rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-white">Add a new achievement</h2>
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <FiPlusCircle className="h-4 w-4 text-primary" />
-                <span>Fields marked optional can be left blank.</span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {(Object.keys(tabCopy) as AchievementKind[]).map((key) => (
-                <TabButton
-                  key={key}
-                  isActive={form.kind === key}
-                  onClick={() => setForm((prev) => ({ ...prev, kind: key }))}
-                >
-                  <FiAward className="h-4 w-4" />
-                  {tabCopy[key].title}
-                </TabButton>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500">{tabCopy[form.kind].helper}</p>
-
-            <div className="grid gap-5">
-              <div className="grid gap-2">
-                <FieldLabel label="Title" />
-                <Input
-                  required
-                  placeholder="e.g. CCNP Enterprise"
-                  value={form.title}
-                  onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel label="Issuer" />
-                <Input
-                  required
-                  placeholder="Organisation or platform"
-                  value={form.issuer}
-                  onChange={(event) => setForm((prev) => ({ ...prev, issuer: event.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel label="Date" helper="Use a friendly format (e.g. June 2025 or Q3 2025)." />
-                <Input
-                  required
-                  placeholder="June 2025"
-                  value={form.date}
-                  onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <FieldLabel
-                  label="Category"
-                  helper="Keep related achievements grouped together on the public page."
-                />
-                <div className="flex flex-col gap-3">
-                  <select
-                    value={form.category}
-                    onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
-                    className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  >
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="flex flex-wrap gap-2">
-                    <Input
-                      placeholder="Add new category"
-                      value={newCategory}
-                      onChange={(event) => setNewCategory(event.target.value)}
-                      className="min-w-[12rem] flex-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={addCategory}
-                      className="rounded-md border border-primary/50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-primary transition hover:bg-primary/10"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-3">
-                <FieldLabel label="Status" helper="Switch to upcoming to reserve a placeholder slot." />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {statusOptions.map((option) => (
-                    <label
-                      key={option.value}
-                      className={`flex cursor-pointer flex-col gap-2 rounded-xl border px-4 py-3 text-sm transition ${
-                        form.status === option.value
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-white/10 bg-white/[0.02] text-gray-300 hover:border-primary/40'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="status"
-                        value={option.value}
-                        checked={form.status === option.value}
-                        onChange={(event) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            status: event.target.value as AchievementStatus,
-                          }))
-                        }
-                        className="hidden"
-                      />
-                      <span className="font-semibold uppercase tracking-wide">{option.label}</span>
-                      <span className="text-xs text-gray-400">{option.helper}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <FieldLabel
-                  label="Key takeaway"
-                  helper="Optional highlight that explains the value of this achievement."
-                />
-                <TextArea
-                  rows={3}
-                  placeholder="Summarise what this milestone means for your growth."
-                  value={form.takeaway}
-                  onChange={(event) => setForm((prev) => ({ ...prev, takeaway: event.target.value }))}
-                />
-              </div>
-
-              <div className="grid gap-4 rounded-xl border border-white/10 bg-dark/40 p-4">
-                <span className="text-sm font-medium text-white">Verification resources</span>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    <FieldLabel
-                      label="Preview image URL"
-                      helper={
-                        isUpcoming
-                          ? 'Optional for upcoming achievements.'
-                          : 'Displays in the main achievements grid.'
-                      }
-                    />
-                    <Input
-                      placeholder="/images/preview/example.png"
-                      value={form.previewUrl}
-                      onChange={(event) => setForm((prev) => ({ ...prev, previewUrl: event.target.value }))}
-                      disabled={isUpcoming}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <FieldLabel label="Badge image URL" helper="Shown on the card when available." />
-                    <Input
-                      placeholder="/images/example.png"
-                      value={form.imageUrl}
-                      onChange={(event) => setForm((prev) => ({ ...prev, imageUrl: event.target.value }))}
-                      disabled={isUpcoming}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <FieldLabel label="Credential URL" helper="Link to Credly or issuing platform." />
-                    <Input
-                      placeholder="https://www.credly.com/..."
-                      value={form.credentialUrl}
-                      onChange={(event) => setForm((prev) => ({ ...prev, credentialUrl: event.target.value }))}
-                      disabled={isUpcoming}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <FieldLabel label="PDF URL" helper="Direct link to certificate PDF." />
-                    <Input
-                      placeholder="/certifications/example.pdf"
-                      value={form.pdfUrl}
-                      onChange={(event) => setForm((prev) => ({ ...prev, pdfUrl: event.target.value }))}
-                      disabled={isUpcoming}
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <FieldLabel
-                    label="Verification note"
-                    helper="Optional context such as ‘Verification available on request’."
-                  />
-                  <Input
-                    placeholder="Verification available on request."
-                    value={form.verificationNote}
-                    onChange={(event) => setForm((prev) => ({ ...prev, verificationNote: event.target.value }))}
-                    disabled={isUpcoming}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="submit"
-                className="flex items-center gap-2 rounded-md bg-primary px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white shadow-lg transition hover:bg-secondary"
-              >
-                <FiPlusCircle className="h-4 w-4" />
-                Save achievement
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="flex items-center gap-2 rounded-md border border-white/10 px-4 py-2 text-xs uppercase tracking-wide text-gray-300 transition hover:border-primary/60 hover:text-primary"
-              >
-                <FiRefreshCcw className="h-4 w-4" />
-                Reset
-              </button>
-            </div>
-          </motion.form>
-
-          <section className="flex flex-col gap-6 rounded-2xl border border-white/10 bg-white/[0.02] p-6 shadow-lg">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-semibold text-white">Live preview</h2>
-                <p className="text-xs text-gray-400">
-                  Review how the public grid will look before publishing any changes.
-                </p>
-              </div>
-              <Link
-                href="/"
-                className="text-xs font-semibold uppercase tracking-wide text-primary underline-offset-4 hover:underline"
-              >
-                View portfolio
-              </Link>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              {(Object.keys(tabCopy) as AchievementKind[]).map((key) => (
-                <TabButton key={key} isActive={activeTab === key} onClick={() => setActiveTab(key)}>
-                  <FiAward className="h-4 w-4" />
-                  {tabCopy[key].title}
-                </TabButton>
-              ))}
-            </div>
-
-            {previewItems.length > 0 ? (
-              <motion.div layout className="grid gap-4 md:grid-cols-2">
-                <AnimatePresence>
-                  {previewItems.map((achievement) => (
-                    <PreviewCard
-                      key={`${achievement.title}-${achievement.date}`}
-                      achievement={achievement}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/10 bg-dark/40 p-10 text-center text-sm text-gray-400">
-                <FiAward className="h-6 w-6 text-primary" />
-                <p>No achievements yet. Start by adding a new record on the left.</p>
-              </div>
-            )}
-          </section>
-        </section>
-
-        <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 shadow-lg">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="max-w-2xl space-y-2">
-              <h2 className="text-xl font-semibold text-white">Credly badge embeds</h2>
-              <p className="text-xs text-gray-400 sm:text-sm">
-                Control the badges that appear on the public Certifications &amp; Badges section. Paste the embed code or a
-                public badge URL, optionally add metadata, and review the live embeds without leaving this page.
+        <form
+          onSubmit={handleAddBadge}
+          className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-lg shadow-black/20 backdrop-blur"
+        >
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Add a Credly embed</h2>
+              <p className="text-sm text-gray-400">
+                Paste the embed HTML from Credly, choose where it should appear, and confirm the preview below.
               </p>
             </div>
-            <span className="text-xs font-semibold uppercase tracking-[0.35em] text-primary/70">Credly</span>
+            <FiPlusCircle className="hidden h-8 w-8 text-primary sm:block" />
           </div>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,420px)_1fr]">
-            <form onSubmit={handleCredlySubmit} className="flex flex-col gap-6 rounded-2xl border border-white/10 bg-dark/40 p-6">
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <FieldLabel
-                    label="Credly embed snippet or badge URL"
-                    helper="Paste the iframe embed snippet from Credly or a public badge URL. We'll auto-detect the badge UUID."
-                  />
-                  <TextArea
-                    rows={4}
-                    placeholder="<div class=&quot;credly-badge&quot; data-share-badge-id=&quot;...&quot; /> or https://www.credly.com/badges/..."
-                    value={credlyForm.rawInput}
-                    onChange={(event) => handleCredlyInputChange(event.target.value)}
-                    className="min-h-[150px]"
-                  />
-                  {credlyError ? (
-                    <p className="text-xs text-red-400">{credlyError}</p>
-                  ) : credlyForm.badgeId ? (
-                    <p className="text-xs text-emerald-400">Badge detected successfully.</p>
-                  ) : null}
-                </div>
+          <div className="mt-6 grid gap-6 lg:grid-cols-12">
+            <label className="lg:col-span-8">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Credly embed code</span>
+              <textarea
+                value={embedInput}
+                onChange={(event) => setEmbedInput(event.target.value)}
+                rows={6}
+                className="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="Paste the full <div> embed snippet from Credly here."
+              />
+            </label>
 
-                <div className="grid gap-2">
-                  <FieldLabel
-                    label="Detected badge UUID"
-                    helper="This value powers the embed. Double-check it matches the intended badge before saving."
-                  />
-                  <Input value={credlyForm.badgeId} readOnly placeholder="Badge UUID will appear once detected" />
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel
-                    label="Category"
-                    helper="Choose where the badge will appear on the public page."
-                  />
-                  <select
-                    value={credlyForm.category}
-                    onChange={(event) =>
-                      setCredlyForm((prev) => ({
-                        ...prev,
-                        category: event.target.value as CredlyCategory,
-                      }))
-                    }
-                    className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  >
-                    {credlyCategoryOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel
-                    label="Title (optional)"
-                    helper="Override the badge title shown in the portfolio. Leave blank to use Credly's default."
-                  />
-                  <Input
-                    placeholder="e.g. AWS Certified Cloud Practitioner"
-                    value={credlyForm.title}
-                    onChange={(event) =>
-                      setCredlyForm((prev) => ({
-                        ...prev,
-                        title: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel
-                    label="Issuer (optional)"
-                    helper="Add context about the awarding organisation."
-                  />
-                  <Input
-                    placeholder="e.g. Amazon Web Services"
-                    value={credlyForm.issuer}
-                    onChange={(event) =>
-                      setCredlyForm((prev) => ({
-                        ...prev,
-                        issuer: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 rounded-md bg-primary px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white shadow-lg transition hover:bg-secondary"
+            <div className="flex flex-col gap-6 lg:col-span-4">
+              <label>
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Category</span>
+                <select
+                  value={selectedCategory}
+                  onChange={(event) => setSelectedCategory(event.target.value as CredlyCategory)}
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
-                  <FiPlusCircle className="h-4 w-4" />
-                  Save badge
-                </button>
-                <button
-                  type="button"
-                  onClick={resetCredlyForm}
-                  className="flex items-center gap-2 rounded-md border border-white/10 px-4 py-2 text-xs uppercase tracking-wide text-gray-300 transition hover:border-primary/60 hover:text-primary"
-                >
-                  <FiRefreshCcw className="h-4 w-4" />
-                  Reset
-                </button>
-              </div>
-            </form>
+                  {categories.map((category) => (
+                    <option key={category.value} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-gray-500">{sectionDescriptions[selectedCategory]}</p>
+              </label>
 
-            <div className="flex flex-col gap-6">
-              <div>
-                <h3 className="text-lg font-semibold text-white">Live embed preview</h3>
-                <p className="text-xs text-gray-400 sm:text-sm">
-                  Badges render exactly as they will on the public site. Deleting an item only affects this local preview list.
-                </p>
-              </div>
+              <button
+                type="submit"
+                disabled={isProcessing}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/40"
+              >
+                <FiPlusCircle className="h-4 w-4" />
+                {isProcessing ? 'Working…' : 'Add badge'}
+              </button>
 
-              <div className="grid gap-8">
-                {credlyCategoryOptions.map((option) => {
-                  const items = credlyItems.filter((item) => item.category === option.value)
-
-                  return (
-                    <div key={option.value} className="space-y-4">
-                      <div>
-                        <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-300">{option.label}</h4>
-                        <p className="text-xs text-gray-500">{credlyCategoryDescriptions[option.value]}</p>
-                      </div>
-
-                      {items.length > 0 ? (
-                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                          {items.map((item) => {
-                            const title = item.title ?? 'Credly Badge'
-
-                            return (
-                              <div
-                                key={item.badgeId}
-                                className="group relative flex h-full flex-col gap-4 rounded-2xl border border-white/10 bg-gradient-to-b from-white/5 via-dark/30 to-dark/40 p-4 shadow-lg shadow-black/10 backdrop-blur-sm"
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="space-y-2">
-                                    {item.issuer ? (
-                                      <p className="text-[11px] uppercase tracking-[0.35em] text-primary/70">{item.issuer}</p>
-                                    ) : null}
-                                    <h5 className="text-base font-semibold text-white">{title}</h5>
-                                    <p className="text-[11px] font-mono text-gray-500">{item.badgeId}</p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCredlyDelete(item)}
-                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-gray-400 transition hover:border-red-400/60 hover:text-red-400"
-                                    aria-label={`Delete ${title}`}
-                                  >
-                                    <FiTrash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
-                                <div className="relative flex grow items-center justify-center rounded-xl border border-white/10 bg-black/20 p-3">
-                                  <div className="credly-badge-frame w-full max-w-[280px]">
-                                    <div
-                                      className="credly-badge block h-[280px] w-full"
-                                      data-iframe-width="280"
-                                      data-iframe-height="280"
-                                      data-hide-footer="true"
-                                      data-hide-share="true"
-                                      data-share-badge-id={item.badgeId}
-                                      data-share-badge-host="https://www.credly.com"
-                                    />
-                                    <span className="credly-badge-overlay" aria-hidden="true" />
-                                  </div>
-                                </div>
-                                <a
-                                  href={`https://www.credly.com/badges/${item.badgeId}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs font-medium uppercase tracking-wide text-primary transition hover:text-secondary"
-                                >
-                                  View on Credly
-                                </a>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <div className="rounded-xl border border-dashed border-white/10 bg-dark/40 p-8 text-center text-xs text-gray-500">
-                          No badges saved for this category yet.
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+              <StatusMessage />
             </div>
+          </div>
+        </form>
+
+        <section className="mt-12">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Custom badges</h2>
+              <p className="text-sm text-gray-400">
+                Badges added here sync to the main portfolio experience. Deleting them removes them everywhere.
+              </p>
+            </div>
+            <span className="text-xs font-semibold uppercase tracking-wide text-primary/70">
+              {customBadges.length} active {customBadges.length === 1 ? 'badge' : 'badges'}
+            </span>
+          </div>
+
+          {customBadges.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-sm text-gray-400">
+              No custom Credly embeds yet. Paste a snippet above to publish your first badge.
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {customBadges.map((badge) => (
+                <div
+                  key={badge.badgeId}
+                  className="flex h-full flex-col gap-4 rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 via-dark/40 to-dark/60 p-6 shadow-lg shadow-black/20"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.3em] text-primary/60">
+                        {badge.category === 'certification' ? 'Certification' : 'Badge'}
+                      </p>
+                      <h3 className="mt-2 text-lg font-semibold text-white">
+                        {badge.title ?? 'Credly Badge'}
+                      </h3>
+                      <p className="mt-1 text-xs text-gray-500">Added {formatDateTime(badge.createdAt)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteBadge(badge)}
+                      disabled={isProcessing}
+                      className="inline-flex items-center justify-center rounded-full border border-white/10 bg-black/30 p-2 text-gray-400 transition hover:border-red-400/50 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      aria-label={`Delete ${badge.title ?? 'Credly badge'}`}
+                    >
+                      <FiTrash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex grow items-center justify-center rounded-xl border border-white/10 bg-black/30 p-4">
+                    {createCredlyBadgeElement(badge)}
+                  </div>
+
+                  <a
+                    href={`https://www.credly.com/badges/${badge.badgeId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-medium uppercase tracking-wide text-primary transition hover:text-secondary"
+                  >
+                    View on Credly
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-16">
+          <h2 className="text-xl font-semibold text-white">Default portfolio badges</h2>
+          <p className="mt-2 text-sm text-gray-400">
+            These badges ship with the site and cannot be removed here. They are listed for reference when checking for
+            duplicates.
+          </p>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {credlyBadges.map((badge) => (
+              <div
+                key={badge.badgeId}
+                className="rounded-2xl border border-white/10 bg-dark/60 p-4 text-sm text-gray-400"
+              >
+                <p className="text-[10px] uppercase tracking-[0.3em] text-primary/60">
+                  {badge.category === 'certification' ? 'Certification' : 'Badge'}
+                </p>
+                <p className="mt-2 font-semibold text-white">{badge.title ?? 'Credly Badge'}</p>
+                {badge.issuer ? <p className="text-xs text-gray-500">{badge.issuer}</p> : null}
+                <p className="mt-4 text-xs text-gray-500">Badge ID: {badge.badgeId}</p>
+              </div>
+            ))}
           </div>
         </section>
       </div>

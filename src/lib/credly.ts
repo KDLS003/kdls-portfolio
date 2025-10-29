@@ -7,6 +7,10 @@ export type CredlyEmbed = {
   issuer?: string
 }
 
+export type StoredCredlyEmbed = CredlyEmbed & {
+  createdAt: string
+}
+
 declare global {
   interface Window {
     Credly?: {
@@ -16,6 +20,10 @@ declare global {
     }
   }
 }
+
+const CREDLY_BADGE_ID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+
+export const CUSTOM_CREDLY_STORAGE_KEY = 'kdls-portfolio.custom-credly-embeds.v1'
 
 export const credlyBadges: CredlyEmbed[] = [
   {
@@ -85,3 +93,84 @@ export const credlyBadges: CredlyEmbed[] = [
     category: 'badge',
   },
 ]
+
+export const isCredlyBadgeId = (value: string) => CREDLY_BADGE_ID_PATTERN.test(value)
+
+export const sanitizeCredlyEmbedInput = (value: string) =>
+  value.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '').trim()
+
+export const parseCredlyEmbedCode = (value: string) => {
+  const sanitized = sanitizeCredlyEmbedInput(value)
+  const badgeIdPattern = new RegExp(
+    `data-share-badge-id\\s*=\\s*['"](${CREDLY_BADGE_ID_PATTERN.source})['"]`,
+    'i',
+  )
+  const titlePattern = /data-iframe-title\s*=\s*['"]([^'"]+)['"]/i
+
+  const badgeIdMatch = sanitized.match(badgeIdPattern)
+
+  if (!badgeIdMatch?.[1]) {
+    throw new Error('Unable to find a Credly badge ID in the provided embed code.')
+  }
+
+  const titleMatch = sanitized.match(titlePattern)
+
+  return {
+    sanitized,
+    badgeId: badgeIdMatch[1],
+    title: titleMatch?.[1]?.trim() ?? '',
+  }
+}
+
+const isOptionalString = (value: unknown) =>
+  value === undefined || value === null || typeof value === 'string'
+
+const isStoredCredlyEmbed = (value: unknown): value is StoredCredlyEmbed => {
+  if (!value || typeof value !== 'object') return false
+
+  const data = value as Record<string, unknown>
+
+  return (
+    typeof data.badgeId === 'string' &&
+    isCredlyBadgeId(data.badgeId) &&
+    (data.category === 'certification' || data.category === 'badge') &&
+    typeof data.createdAt === 'string' &&
+    isOptionalString(data.title) &&
+    isOptionalString(data.issuer)
+  )
+}
+
+export const loadStoredCredlyEmbeds = (): StoredCredlyEmbed[] => {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_CREDLY_STORAGE_KEY)
+
+    if (!raw) return []
+
+    const parsed = JSON.parse(raw)
+
+    if (!Array.isArray(parsed)) return []
+
+    return parsed.filter(isStoredCredlyEmbed)
+  } catch (error) {
+    console.error('Failed to load stored Credly embeds', error)
+    return []
+  }
+}
+
+export const saveStoredCredlyEmbeds = (embeds: StoredCredlyEmbed[]) => {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(CUSTOM_CREDLY_STORAGE_KEY, JSON.stringify(embeds))
+  } catch (error) {
+    console.error('Failed to persist Credly embeds', error)
+  }
+}
+
+export const toCredlyEmbeds = (stored: StoredCredlyEmbed[]): CredlyEmbed[] =>
+  stored.map(({ createdAt: _createdAt, ...rest }) => rest)
+
+export const sortStoredCredlyEmbeds = (embeds: StoredCredlyEmbed[]) =>
+  [...embeds].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
