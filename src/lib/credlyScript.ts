@@ -89,7 +89,7 @@ export const verifyCredlyEmbedPresence = async (
   badgeId: string,
   {
     shouldExist = true,
-    timeoutMs = 6000,
+    timeoutMs = 10000,
     pollInterval = 250,
   }: { shouldExist?: boolean; timeoutMs?: number; pollInterval?: number } = {},
 ) => {
@@ -97,14 +97,24 @@ export const verifyCredlyEmbedPresence = async (
 
   const start = performance.now()
 
-  const badgeIframeSelector = `iframe[src*="/badges/${badgeId}"]`
   const badgeEmbedSelector = `[data-share-badge-id="${badgeId}"]`
 
   return new Promise<boolean>((resolve) => {
     const check = () => {
       const containers = Array.from(document.querySelectorAll<HTMLElement>(badgeEmbedSelector))
-      const iframeBySrc = document.querySelector<HTMLIFrameElement>(badgeIframeSelector)
       const iframeByAttr = document.querySelector<HTMLIFrameElement>(`iframe${badgeEmbedSelector}`)
+      const iframeBySrc = Array.from(document.querySelectorAll<HTMLIFrameElement>('iframe')).find((element) => {
+        try {
+          if (!element.src) return false
+
+          const url = new URL(element.src, window.location.href)
+          const hasIdParam = url.searchParams.get('badge_id') === badgeId
+
+          return hasIdParam || url.pathname.includes(badgeId)
+        } catch (error) {
+          return element.src.includes(badgeId)
+        }
+      })
       const containerWithIframe = containers.some((element) => element.tagName === 'IFRAME' || !!element.querySelector('iframe'))
 
       if (shouldExist) {
