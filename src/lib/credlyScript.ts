@@ -97,17 +97,22 @@ export const verifyCredlyEmbedPresence = async (
 
   const start = performance.now()
 
+  const badgeIframeSelector = `iframe[src*="/badges/${badgeId}"]`
+  const badgeEmbedSelector = `[data-share-badge-id="${badgeId}"]`
+
   return new Promise<boolean>((resolve) => {
     const check = () => {
-      const container = document.querySelector(`[data-share-badge-id="${badgeId}"]`)
-      const hasIframe = !!container?.querySelector('iframe')
+      const containers = Array.from(document.querySelectorAll<HTMLElement>(badgeEmbedSelector))
+      const iframeBySrc = document.querySelector<HTMLIFrameElement>(badgeIframeSelector)
+      const iframeByAttr = document.querySelector<HTMLIFrameElement>(`iframe${badgeEmbedSelector}`)
+      const containerWithIframe = containers.some((element) => element.tagName === 'IFRAME' || !!element.querySelector('iframe'))
 
       if (shouldExist) {
-        if (container && hasIframe) {
+        if (iframeBySrc || iframeByAttr || containerWithIframe) {
           resolve(true)
           return
         }
-      } else if (!container) {
+      } else if (containers.length === 0 && !iframeBySrc && !iframeByAttr) {
         resolve(true)
         return
       }
