@@ -102,6 +102,8 @@ export default function AdminPage() {
   const [customBadges, setCustomBadges] = useState<StoredCredlyEmbed[]>([])
   const [status, setStatus] = useState<StatusState>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [titleInput, setTitleInput] = useState('')
+  const [issuerInput, setIssuerInput] = useState('')
 
   const defaultBadgeIds = useMemo(
     () => new Set(credlyBadges.map((badge) => badge.badgeId)),
@@ -155,6 +157,8 @@ export default function AdminPage() {
 
   const resetForm = () => {
     setEmbedInput('')
+    setTitleInput('')
+    setIssuerInput('')
   }
 
   const handleAddBadge = async (event: FormEvent<HTMLFormElement>) => {
@@ -177,11 +181,15 @@ export default function AdminPage() {
         throw new Error('This badge is already included in your portfolio.')
       }
 
+      const normalizedTitle = titleInput.trim() || parsed.title || undefined
+      const normalizedIssuer = issuerInput.trim() || undefined
+
       const newBadge: StoredCredlyEmbed = {
         badgeId: parsed.badgeId,
         category: selectedCategory,
         createdAt: new Date().toISOString(),
-        ...(parsed.title ? { title: parsed.title } : {}),
+        ...(normalizedTitle ? { title: normalizedTitle } : {}),
+        ...(normalizedIssuer ? { issuer: normalizedIssuer } : {}),
       }
 
       setCustomBadges((previous) => sortStoredCredlyEmbeds([...previous, newBadge]))
@@ -301,16 +309,42 @@ export default function AdminPage() {
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-12">
-            <label className="lg:col-span-8">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Credly embed code</span>
-              <textarea
-                value={embedInput}
-                onChange={(event) => setEmbedInput(event.target.value)}
-                rows={6}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                placeholder="Paste the full <div> embed snippet from Credly here."
-              />
-            </label>
+            <div className="space-y-6 lg:col-span-8">
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Credly embed code</span>
+                <textarea
+                  value={embedInput}
+                  onChange={(event) => setEmbedInput(event.target.value)}
+                  rows={6}
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="Paste the full <div> embed snippet from Credly here."
+                />
+              </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Certificate name</span>
+                  <input
+                    type="text"
+                    value={titleInput}
+                    onChange={(event) => setTitleInput(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    placeholder="Optional — overrides the title detected from Credly"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Issuing provider</span>
+                  <input
+                    type="text"
+                    value={issuerInput}
+                    onChange={(event) => setIssuerInput(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    placeholder="Optional — e.g. Cisco, AWS Academy"
+                  />
+                </label>
+              </div>
+            </div>
 
             <div className="flex flex-col gap-6 lg:col-span-4">
               <label>
@@ -375,6 +409,11 @@ export default function AdminPage() {
                       <h3 className="mt-2 text-lg font-semibold text-white">
                         {badge.title ?? 'Credly Badge'}
                       </h3>
+                      {badge.issuer ? (
+                        <p className="text-xs font-medium uppercase tracking-[0.3em] text-primary/70">
+                          {badge.issuer}
+                        </p>
+                      ) : null}
                       <p className="mt-1 text-xs text-gray-500">Added {formatDateTime(badge.createdAt)}</p>
                     </div>
                     <button
