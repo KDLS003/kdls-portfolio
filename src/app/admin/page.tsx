@@ -28,6 +28,7 @@ import {
   verifyCredlyEmbedPresence,
   waitForNextFrame,
 } from '../../lib/credlyScript'
+import CredlyEmbedFrame from '../../components/CredlyEmbedFrame'
 
 const categories: { value: CredlyCategory; label: string; helper: string }[] = [
   {
@@ -80,21 +81,6 @@ const formatDateTime = (value: string) => {
     return value
   }
 }
-
-const createCredlyBadgeElement = (badge: { badgeId: string }) => (
-  <div className="credly-badge-frame w-full max-w-[340px]">
-    <div
-      className="credly-badge block h-[340px] w-full"
-      data-iframe-width="340"
-      data-iframe-height="340"
-      data-hide-footer="true"
-      data-hide-share="true"
-      data-share-badge-id={badge.badgeId}
-      data-share-badge-host="https://www.credly.com"
-    />
-    <span className="credly-badge-overlay" aria-hidden="true" />
-  </div>
-)
 
 export default function AdminPage() {
   const [embedInput, setEmbedInput] = useState('')
@@ -188,6 +174,7 @@ export default function AdminPage() {
         badgeId: parsed.badgeId,
         category: selectedCategory,
         createdAt: new Date().toISOString(),
+        embedHtml: parsed.sanitized,
         ...(normalizedTitle ? { title: normalizedTitle } : {}),
         ...(normalizedIssuer ? { issuer: normalizedIssuer } : {}),
       }
@@ -428,7 +415,7 @@ export default function AdminPage() {
                   </div>
 
                   <div className="flex grow items-center justify-center rounded-xl border border-white/10 bg-black/30 p-4">
-                    {createCredlyBadgeElement(badge)}
+                    <CredlyEmbedFrame badgeId={badge.badgeId} embedHtml={badge.embedHtml} />
                   </div>
 
                   <a

@@ -5,6 +5,7 @@ export type CredlyEmbed = {
   category: CredlyCategory
   title?: string
   issuer?: string
+  embedHtml?: string
 }
 
 export type StoredCredlyEmbed = CredlyEmbed & {
@@ -113,12 +114,42 @@ export const parseCredlyEmbedCode = (value: string) => {
     throw new Error('Unable to find a Credly badge ID in the provided embed code.')
   }
 
-  const titleMatch = sanitized.match(titlePattern)
+  let title = sanitized.match(titlePattern)?.[1]?.trim() ?? ''
+  let normalized = sanitized
+
+  if (typeof document !== 'undefined') {
+    const template = document.createElement('template')
+    template.innerHTML = sanitized
+
+    const element = template.content.querySelector<HTMLElement>('[data-share-badge-id]')
+
+    if (element) {
+      element.setAttribute('data-share-badge-id', badgeIdMatch[1])
+      element.setAttribute('data-share-badge-host', element.getAttribute('data-share-badge-host') ?? 'https://www.credly.com')
+      element.setAttribute('data-hide-footer', 'true')
+      element.setAttribute('data-hide-share', 'true')
+      element.setAttribute('data-iframe-width', element.getAttribute('data-iframe-width') ?? '340')
+      element.setAttribute('data-iframe-height', element.getAttribute('data-iframe-height') ?? '340')
+
+      if (!element.getAttribute('data-iframe-src')) {
+        element.setAttribute(
+          'data-iframe-src',
+          `https://www.credly.com/embedded_window/${badgeIdMatch[1]}?embed=true&show_share=false`,
+        )
+      }
+
+      if (!title) {
+        title = element.getAttribute('data-iframe-title')?.trim() ?? ''
+      }
+
+      normalized = element.outerHTML
+    }
+  }
 
   return {
-    sanitized,
+    sanitized: normalized,
     badgeId: badgeIdMatch[1],
-    title: titleMatch?.[1]?.trim() ?? '',
+    title,
   }
 }
 
@@ -136,7 +167,8 @@ const isStoredCredlyEmbed = (value: unknown): value is StoredCredlyEmbed => {
     (data.category === 'certification' || data.category === 'badge') &&
     typeof data.createdAt === 'string' &&
     isOptionalString(data.title) &&
-    isOptionalString(data.issuer)
+    isOptionalString(data.issuer) &&
+    isOptionalString((data as Record<string, unknown>).embedHtml)
   )
 }
 

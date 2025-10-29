@@ -18,6 +18,11 @@
   z-index: 0;
 }
 
+.credly-badge .credly-badge-embed {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .credly-badge-overlay {
   position: absolute;
   inset: 0;
