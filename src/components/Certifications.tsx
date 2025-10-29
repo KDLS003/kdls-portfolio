@@ -1,10 +1,18 @@
 "use client";
 
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { fadeIn } from '../lib/animations'
-import { credlyBadges } from '../lib/credly'
-import type { CredlyCategory } from '../lib/credly'
+import {
+  CUSTOM_CREDLY_STORAGE_KEY,
+  credlyBadges,
+  loadStoredCredlyEmbeds,
+  sortStoredCredlyEmbeds,
+  toCredlyEmbeds,
+} from '../lib/credly'
+import type { CredlyCategory, CredlyEmbed, StoredCredlyEmbed } from '../lib/credly'
+import { ensureCredlyScript, reinitializeCredlyEmbeds } from '../lib/credlyScript'
+import CredlyEmbedFrame from './CredlyEmbedFrame'
 
 const MotionSection = motion.section;
 const MotionArticle = motion.article;
@@ -29,37 +37,62 @@ const badgeCardVariants = {
   visible: { opacity: 1, y: 0 },
 }
 
+const mapStoredEmbeds = (stored: StoredCredlyEmbed[]): CredlyEmbed[] =>
+  toCredlyEmbeds(sortStoredCredlyEmbeds(stored))
+
 export default function Certifications() {
+  const [customBadges, setCustomBadges] = useState<CredlyEmbed[]>([])
+
   useEffect(() => {
-    const scriptSrc = 'https://cdn.credly.com/assets/utilities/embed.js'
-    const handleScriptLoad = () => {
-      window.Credly?.Tracker?.init?.()
+    const updateFromStorage = () => {
+      const stored = loadStoredCredlyEmbeds()
+      setCustomBadges(mapStoredEmbeds(stored))
     }
 
-    const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${scriptSrc}"]`)
+    updateFromStorage()
 
-    if (existingScript) {
-      if (window.Credly) {
-        handleScriptLoad()
-      } else {
-        existingScript.addEventListener('load', handleScriptLoad)
-      }
+    const handleStorage = (event: StorageEvent) => {
+      if (!event.key) return
+      if (event.key !== CUSTOM_CREDLY_STORAGE_KEY) return
 
-      return () => {
-        existingScript.removeEventListener('load', handleScriptLoad)
-      }
+      updateFromStorage()
     }
 
-    const script = document.createElement('script')
-    script.src = scriptSrc
-    script.async = true
-    script.addEventListener('load', handleScriptLoad)
-    document.body.appendChild(script)
+    window.addEventListener('storage', handleStorage)
 
     return () => {
-      script.removeEventListener('load', handleScriptLoad)
+      window.removeEventListener('storage', handleStorage)
     }
   }, [])
+
+  useEffect(() => {
+    let isActive = true
+
+    ensureCredlyScript()
+      .then(() => {
+        if (!isActive) return
+        reinitializeCredlyEmbeds()
+      })
+      .catch((error) => {
+        console.error('Failed to load Credly embed script', error)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    ensureCredlyScript()
+      .then(() => {
+        reinitializeCredlyEmbeds()
+      })
+      .catch((error) => {
+        console.error('Failed to refresh Credly embeds', error)
+      })
+  }, [customBadges])
+
+  const allBadges = useMemo(() => [...credlyBadges, ...customBadges], [customBadges])
 
   return (
     <section id="certifications" className="section bg-dark-lighter">
@@ -79,7 +112,7 @@ export default function Certifications() {
         </motion.div>
 
         {sections.map((section) => {
-          const items = credlyBadges.filter((badge) => badge.category === section.filter)
+          const items = allBadges.filter((badge) => badge.category === section.filter)
 
           return (
             <MotionSection
@@ -115,18 +148,7 @@ export default function Certifications() {
                         <h4 className="mt-3 text-lg font-semibold text-white sm:text-xl">{badgeTitle}</h4>
                       </div>
                       <div className="relative flex grow items-center justify-center rounded-xl border border-white/10 bg-black/20 p-4">
-                        <div className="credly-badge-frame w-full max-w-[340px]">
-                          <div
-                            className="credly-badge block h-[340px] w-full"
-                            data-iframe-width="340"
-                            data-iframe-height="340"
-                            data-hide-footer="true"
-                            data-hide-share="true"
-                            data-share-badge-id={badge.badgeId}
-                            data-share-badge-host="https://www.credly.com"
-                          />
-                          <span className="credly-badge-overlay" aria-hidden="true" />
-                        </div>
+                        <CredlyEmbedFrame badgeId={badge.badgeId} embedHtml={badge.embedHtml} />
                       </div>
                       <a
                         href={`https://www.credly.com/badges/${badge.badgeId}`}
