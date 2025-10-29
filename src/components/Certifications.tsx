@@ -1,128 +1,128 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { fadeIn } from '../lib/animations'
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { fadeIn } from "../lib/animations";
 import {
   credlyBadges,
   credlyStorageKey,
   credlyUpdateEvent,
   mergeCredlyLists,
   readCredlyStorage,
-} from '../lib/credly'
-import type { CredlyCategory, CredlyEmbed } from '../lib/credly'
+} from "../lib/credly";
+import type { CredlyCategory, CredlyEmbed } from "../lib/credly";
 
-const MotionSection = motion.section
-const MotionArticle = motion.article
+const MotionSection = motion.section;
+const MotionArticle = motion.article;
 
 const sections = [
   {
-    title: 'Professional Certifications',
+    title: "Professional Certifications",
     description:
-      'Industry-recognised credentials earned through rigorous assessments and hands-on validation.',
-    filter: 'certification' as CredlyCategory,
+      "Industry-recognised credentials earned through rigorous assessments and hands-on validation.",
+    filter: "certification" as CredlyCategory,
   },
   {
-    title: 'Digital Badges & Challenges',
+    title: "Digital Badges & Challenges",
     description:
-      'Micro-credentials and competitive challenges that highlight continued learning and practical expertise.',
-    filter: 'badge' as CredlyCategory,
+      "Micro-credentials and competitive challenges that highlight continued learning and practical expertise.",
+    filter: "badge" as CredlyCategory,
   },
-]
+];
 
 const badgeCardVariants = {
   hidden: { opacity: 0, y: 18 },
   visible: { opacity: 1, y: 0 },
-}
+};
 
 export default function Certifications() {
-  const [badgeItems, setBadgeItems] = useState<CredlyEmbed[]>(credlyBadges)
+  const [badgeItems, setBadgeItems] = useState<CredlyEmbed[]>(credlyBadges);
 
   useEffect(() => {
     const loadStoredBadges = () => {
-      const stored = readCredlyStorage()
+      const stored = readCredlyStorage();
 
       if (!stored) {
         setBadgeItems((current) =>
           current === credlyBadges ? current : credlyBadges,
-        )
-        return
+        );
+        return;
       }
 
       setBadgeItems((current) => {
-        const merged = mergeCredlyLists(credlyBadges, stored)
+        const merged = mergeCredlyLists(credlyBadges, stored);
         if (merged.length === current.length) {
           const hasDifference = merged.some(
             (item, index) => item.badgeId !== current[index]?.badgeId,
-          )
-          if (!hasDifference) return current
+          );
+          if (!hasDifference) return current;
         }
-        return merged
-      })
-    }
+        return merged;
+      });
+    };
 
-    loadStoredBadges()
+    loadStoredBadges();
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key && event.key !== credlyStorageKey) return
-      loadStoredBadges()
-    }
+      if (event.key && event.key !== credlyStorageKey) return;
+      loadStoredBadges();
+    };
 
     const handleCustomUpdate = () => {
-      loadStoredBadges()
-    }
+      loadStoredBadges();
+    };
 
-    window.addEventListener('storage', handleStorage)
-    window.addEventListener(credlyUpdateEvent, handleCustomUpdate)
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener(credlyUpdateEvent, handleCustomUpdate);
 
     return () => {
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener(credlyUpdateEvent, handleCustomUpdate)
-    }
-  }, [])
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(credlyUpdateEvent, handleCustomUpdate);
+    };
+  }, []);
 
   useEffect(() => {
-    const scriptSrc = 'https://cdn.credly.com/assets/utilities/embed.js'
+    const scriptSrc = "https://cdn.credly.com/assets/utilities/embed.js";
     const handleScriptLoad = () => {
-      window.Credly?.Tracker?.init?.()
-    }
+      window.Credly?.Tracker?.init?.();
+    };
 
     const existingScript = document.querySelector<HTMLScriptElement>(
       `script[src="${scriptSrc}"]`,
-    )
+    );
 
     if (existingScript) {
       if (window.Credly) {
-        handleScriptLoad()
+        handleScriptLoad();
       } else {
-        existingScript.addEventListener('load', handleScriptLoad)
+        existingScript.addEventListener("load", handleScriptLoad);
       }
 
       return () => {
-        existingScript.removeEventListener('load', handleScriptLoad)
-      }
+        existingScript.removeEventListener("load", handleScriptLoad);
+      };
     }
 
-    const script = document.createElement('script')
-    script.src = scriptSrc
-    script.async = true
-    script.addEventListener('load', handleScriptLoad)
-    document.body.appendChild(script)
+    const script = document.createElement("script");
+    script.src = scriptSrc;
+    script.async = true;
+    script.addEventListener("load", handleScriptLoad);
+    document.body.appendChild(script);
 
     return () => {
-      script.removeEventListener('load', handleScriptLoad)
-    }
-  }, [])
+      script.removeEventListener("load", handleScriptLoad);
+    };
+  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      window.Credly?.Tracker?.init?.()
-    }, 80)
+      window.Credly?.Tracker?.init?.();
+    }, 80);
 
     return () => {
-      window.clearTimeout(timeout)
-    }
-  }, [badgeItems])
+      window.clearTimeout(timeout);
+    };
+  }, [badgeItems]);
 
   return (
     <section id="certifications" className="section bg-dark-lighter">
@@ -148,7 +148,7 @@ export default function Certifications() {
         {sections.map((section) => {
           const items = badgeItems.filter(
             (badge) => badge.category === section.filter,
-          )
+          );
 
           return (
             <MotionSection
@@ -170,7 +170,7 @@ export default function Certifications() {
 
               <div className="grid gap-6 sm:gap-8 md:grid-cols-2 xl:grid-cols-3">
                 {items.map((badge) => {
-                  const badgeTitle = badge.title ?? 'Credly Badge'
+                  const badgeTitle = badge.title ?? "Credly Badge";
 
                   return (
                     <MotionArticle
@@ -217,15 +217,15 @@ export default function Certifications() {
                         View on Credly
                       </a>
                     </MotionArticle>
-                  )
+                  );
                 })}
               </div>
             </MotionSection>
-          )
+          );
         })}
 
         <div className="text-center text-gray-400 text-sm sm:text-base">
-          For a comprehensive credential history, visit my{' '}
+          For a comprehensive credential history, visit my{" "}
           <a
             href="https://www.credly.com/users/kenneth-david-santos"
             target="_blank"
@@ -238,5 +238,5 @@ export default function Certifications() {
         </div>
       </div>
     </section>
-  )
+  );
 }

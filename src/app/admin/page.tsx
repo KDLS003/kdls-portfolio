@@ -1,15 +1,15 @@
-'use client'
+"use client";
 
-import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   FiAward,
   FiLayers,
   FiPlusCircle,
   FiRefreshCcw,
   FiTrash2,
-} from 'react-icons/fi'
-import Link from 'next/link'
+} from "react-icons/fi";
+import Link from "next/link";
 import {
   Achievement,
   AchievementKind,
@@ -17,7 +17,7 @@ import {
   badgeData,
   certificateData,
   defaultCategories,
-} from '../../lib/achievements'
+} from "../../lib/achievements";
 import {
   credlyBadges,
   credlyUpdateEvent,
@@ -26,106 +26,106 @@ import {
   writeCredlyStorage,
   type CredlyCategory,
   type CredlyEmbed,
-} from '../../lib/credly'
+} from "../../lib/credly";
 
-interface AchievementForm extends Omit<Achievement, 'kind'> {
-  kind: AchievementKind
+interface AchievementForm extends Omit<Achievement, "kind"> {
+  kind: AchievementKind;
 }
 
 const initialFormState: AchievementForm = {
-  kind: 'certificate',
-  title: '',
-  issuer: '',
-  date: '',
-  status: 'earned',
-  category: defaultCategories[0] ?? 'General',
-  takeaway: '',
-  imageUrl: '',
-  previewUrl: '',
-  credentialUrl: '',
-  pdfUrl: '',
-  verificationNote: '',
-}
+  kind: "certificate",
+  title: "",
+  issuer: "",
+  date: "",
+  status: "earned",
+  category: defaultCategories[0] ?? "General",
+  takeaway: "",
+  imageUrl: "",
+  previewUrl: "",
+  credentialUrl: "",
+  pdfUrl: "",
+  verificationNote: "",
+};
 
 const statusOptions: {
-  label: string
-  value: AchievementStatus
-  helper: string
+  label: string;
+  value: AchievementStatus;
+  helper: string;
 }[] = [
   {
-    label: 'Earned',
-    value: 'earned',
+    label: "Earned",
+    value: "earned",
     helper:
-      'Use for certifications and badges that are fully complete and verifiable.',
+      "Use for certifications and badges that are fully complete and verifiable.",
   },
   {
-    label: 'Upcoming',
-    value: 'upcoming',
-    helper: 'Reserve space for milestones that are in progress or planned.',
+    label: "Upcoming",
+    value: "upcoming",
+    helper: "Reserve space for milestones that are in progress or planned.",
   },
-]
+];
 
 const tabCopy: Record<AchievementKind, { title: string; helper: string }> = {
   certificate: {
-    title: 'Certifications',
-    helper: 'Track accredited certifications, bootcamps, or intensive courses.',
+    title: "Certifications",
+    helper: "Track accredited certifications, bootcamps, or intensive courses.",
   },
   badge: {
-    title: 'Badges',
-    helper: 'Capture micro-credentials and lightweight recognitions.',
+    title: "Badges",
+    helper: "Capture micro-credentials and lightweight recognitions.",
   },
-}
+};
 
 const credlyCategoryOptions: { label: string; value: CredlyCategory }[] = [
   {
-    label: 'Professional Certifications',
-    value: 'certification',
+    label: "Professional Certifications",
+    value: "certification",
   },
   {
-    label: 'Digital Badges & Challenges',
-    value: 'badge',
+    label: "Digital Badges & Challenges",
+    value: "badge",
   },
-]
+];
 
 const credlyCategoryDescriptions: Record<CredlyCategory, string> = {
   certification:
-    'Full-length credentials and assessments that validate in-depth skill mastery.',
+    "Full-length credentials and assessments that validate in-depth skill mastery.",
   badge:
-    'Micro-credentials, community challenges, and short-form achievements that show continued learning.',
-}
+    "Micro-credentials, community challenges, and short-form achievements that show continued learning.",
+};
 
-const credlyScriptSrc = 'https://cdn.credly.com/assets/utilities/embed.js'
+const credlyScriptSrc = "https://cdn.credly.com/assets/utilities/embed.js";
 
 interface CredlyFormState {
-  rawInput: string
-  badgeId: string
-  category: CredlyCategory
-  title: string
-  issuer: string
+  rawInput: string;
+  badgeId: string;
+  category: CredlyCategory;
+  title: string;
+  issuer: string;
 }
 
 const initialCredlyForm: CredlyFormState = {
-  rawInput: '',
-  badgeId: '',
-  category: 'certification',
-  title: '',
-  issuer: '',
-}
+  rawInput: "",
+  badgeId: "",
+  category: "certification",
+  title: "",
+  issuer: "",
+};
 
 const extractCredlyBadgeId = (value: string) => {
   const pattern =
-    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
-  const match = value.match(pattern)
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  const match = value.match(pattern);
 
-  return match?.[0] ?? ''
-}
+  return match?.[0] ?? "";
+};
 
 const FieldLabel = ({ label, helper }: { label: string; helper?: string }) => (
   <div className="flex flex-col gap-1">
     <span className="text-sm font-medium text-white">{label}</span>
     {helper ? <span className="text-xs text-gray-400">{helper}</span> : null}
   </div>
-)
+);
 
 const Input = ({
   className,
@@ -133,9 +133,9 @@ const Input = ({
 }: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className={`w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 ${className ?? ''}`.trim()}
+    className={`w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 ${className ?? ""}`.trim()}
   />
-)
+);
 
 const TextArea = ({
   className,
@@ -143,42 +143,42 @@ const TextArea = ({
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     {...props}
-    className={`w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 ${className ?? ''}`.trim()}
+    className={`w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 ${className ?? ""}`.trim()}
   />
-)
+);
 
 const TabButton = ({
   isActive,
   children,
   onClick,
 }: {
-  isActive: boolean
-  children: React.ReactNode
-  onClick: () => void
+  isActive: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
 }) => (
   <motion.button
     type="button"
     onClick={onClick}
     className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm uppercase tracking-wide transition-colors ${
       isActive
-        ? 'border-primary bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.35)]'
-        : 'border-white/10 bg-dark text-gray-300 hover:border-primary/50 hover:text-primary'
+        ? "border-primary bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.35)]"
+        : "border-white/10 bg-dark text-gray-300 hover:border-primary/50 hover:text-primary"
     }`}
     whileHover={{ scale: 1.02 }}
     whileTap={{ scale: 0.98 }}
   >
     {children}
   </motion.button>
-)
+);
 
 const PreviewCard = ({
   achievement,
   onDelete,
 }: {
-  achievement: Achievement
-  onDelete: (achievement: Achievement) => void
+  achievement: Achievement;
+  onDelete: (achievement: Achievement) => void;
 }) => {
-  const isUpcoming = achievement.status === 'upcoming'
+  const isUpcoming = achievement.status === "upcoming";
 
   return (
     <motion.article
@@ -199,11 +199,11 @@ const PreviewCard = ({
           <span
             className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide leading-none ${
               isUpcoming
-                ? 'border border-primary/40 text-primary/80'
-                : 'border border-emerald-400/40 text-emerald-300'
+                ? "border border-primary/40 text-primary/80"
+                : "border border-emerald-400/40 text-emerald-300"
             }`}
           >
-            {isUpcoming ? 'Upcoming' : 'Earned'}
+            {isUpcoming ? "Upcoming" : "Earned"}
           </span>
           <button
             type="button"
@@ -213,7 +213,7 @@ const PreviewCard = ({
                   `Remove ${achievement.title}? This only updates the preview list.`,
                 )
               ) {
-                onDelete(achievement)
+                onDelete(achievement);
               }
             }}
             className="inline-flex shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] p-2 text-gray-400 transition hover:border-red-400/60 hover:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400 focus-visible:ring-0 sm:relative sm:z-10"
@@ -234,25 +234,25 @@ const PreviewCard = ({
         {achievement.verificationNote ? <span>Verification Note</span> : null}
       </div>
     </motion.article>
-  )
-}
+  );
+};
 
 export default function AdminPage() {
-  const [form, setForm] = useState<AchievementForm>(initialFormState)
+  const [form, setForm] = useState<AchievementForm>(initialFormState);
   const [certifications, setCertifications] =
-    useState<Achievement[]>(certificateData)
-  const [badges, setBadges] = useState<Achievement[]>(badgeData)
-  const [categories, setCategories] = useState<string[]>(defaultCategories)
-  const [newCategory, setNewCategory] = useState('')
-  const [activeTab, setActiveTab] = useState<AchievementKind>('certificate')
+    useState<Achievement[]>(certificateData);
+  const [badges, setBadges] = useState<Achievement[]>(badgeData);
+  const [categories, setCategories] = useState<string[]>(defaultCategories);
+  const [newCategory, setNewCategory] = useState("");
+  const [activeTab, setActiveTab] = useState<AchievementKind>("certificate");
   const [credlyItems, setCredlyItems] = useState<CredlyEmbed[]>(() => {
-    const stored = readCredlyStorage()
-    return mergeCredlyLists(credlyBadges, stored)
-  })
+    const stored = readCredlyStorage();
+    return mergeCredlyLists(credlyBadges, stored);
+  });
   const [credlyForm, setCredlyForm] =
-    useState<CredlyFormState>(initialCredlyForm)
-  const [credlyError, setCredlyError] = useState<string | null>(null)
-  const hasPersistedCredlyRef = useRef(false)
+    useState<CredlyFormState>(initialCredlyForm);
+  const [credlyError, setCredlyError] = useState<string | null>(null);
+  const hasPersistedCredlyRef = useRef(false);
 
   const makeKey = (achievement: Achievement) =>
     [
@@ -260,111 +260,111 @@ export default function AdminPage() {
       achievement.title,
       achievement.issuer,
       achievement.date,
-    ].join('::')
+    ].join("::");
 
   useEffect(() => {
     const handleScriptLoad = () => {
-      window.Credly?.Tracker?.init?.()
-    }
+      window.Credly?.Tracker?.init?.();
+    };
 
     const existingScript = document.querySelector<HTMLScriptElement>(
       `script[src="${credlyScriptSrc}"]`,
-    )
+    );
 
     if (existingScript) {
       if (window.Credly) {
-        handleScriptLoad()
+        handleScriptLoad();
       } else {
-        existingScript.addEventListener('load', handleScriptLoad)
+        existingScript.addEventListener("load", handleScriptLoad);
       }
 
       return () => {
-        existingScript.removeEventListener('load', handleScriptLoad)
-      }
+        existingScript.removeEventListener("load", handleScriptLoad);
+      };
     }
 
-    const script = document.createElement('script')
-    script.src = credlyScriptSrc
-    script.async = true
-    script.addEventListener('load', handleScriptLoad)
-    document.body.appendChild(script)
+    const script = document.createElement("script");
+    script.src = credlyScriptSrc;
+    script.async = true;
+    script.addEventListener("load", handleScriptLoad);
+    document.body.appendChild(script);
 
     return () => {
-      script.removeEventListener('load', handleScriptLoad)
-    }
-  }, [])
+      script.removeEventListener("load", handleScriptLoad);
+    };
+  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      window.Credly?.Tracker?.init?.()
-    }, 60)
+      window.Credly?.Tracker?.init?.();
+    }, 60);
 
     return () => {
-      window.clearTimeout(timeout)
-    }
-  }, [credlyItems])
+      window.clearTimeout(timeout);
+    };
+  }, [credlyItems]);
 
   useEffect(() => {
     if (!hasPersistedCredlyRef.current) {
-      hasPersistedCredlyRef.current = true
-      return
+      hasPersistedCredlyRef.current = true;
+      return;
     }
 
-    writeCredlyStorage(credlyItems)
+    writeCredlyStorage(credlyItems);
     window.dispatchEvent(
       new CustomEvent(credlyUpdateEvent, { detail: credlyItems }),
-    )
-  }, [credlyItems])
+    );
+  }, [credlyItems]);
 
   useEffect(() => {
     if (!categories.includes(form.category)) {
-      setForm((prev) => ({ ...prev, category: categories[0] ?? 'General' }))
+      setForm((prev) => ({ ...prev, category: categories[0] ?? "General" }));
     }
-  }, [categories, form.category])
+  }, [categories, form.category]);
 
-  const previewItems = activeTab === 'certificate' ? certifications : badges
+  const previewItems = activeTab === "certificate" ? certifications : badges;
 
   const handleDelete = (achievement: Achievement) => {
-    if (achievement.kind === 'certificate') {
+    if (achievement.kind === "certificate") {
       setCertifications((prev) =>
         prev.filter((item) => makeKey(item) !== makeKey(achievement)),
-      )
-      return
+      );
+      return;
     }
 
     setBadges((prev) =>
       prev.filter((item) => makeKey(item) !== makeKey(achievement)),
-    )
-  }
+    );
+  };
 
   const addCategory = () => {
-    const value = newCategory.trim()
-    if (!value) return
+    const value = newCategory.trim();
+    if (!value) return;
     if (!categories.some((cat) => cat.toLowerCase() === value.toLowerCase())) {
-      setCategories((prev) => [...prev, value])
+      setCategories((prev) => [...prev, value]);
     }
-    setForm((prev) => ({ ...prev, category: value }))
-    setNewCategory('')
-  }
+    setForm((prev) => ({ ...prev, category: value }));
+    setNewCategory("");
+  };
 
   const resetForm = () => {
     setForm((prev) => ({
       ...initialFormState,
-      category: categories[0] ?? 'General',
+      category: categories[0] ?? "General",
       kind: prev.kind,
-    }))
-  }
+    }));
+  };
 
   const resetCredlyForm = () => {
     setCredlyForm((prev) => ({
       ...initialCredlyForm,
       category: prev.category,
-    }))
-    setCredlyError(null)
-  }
+    }));
+    setCredlyError(null);
+  };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+    event.preventDefault();
     const payload: Achievement = {
       ...form,
       takeaway: form.takeaway?.trim() ? form.takeaway : undefined,
@@ -377,51 +377,51 @@ export default function AdminPage() {
       verificationNote: form.verificationNote?.trim()
         ? form.verificationNote
         : undefined,
-    }
+    };
 
-    if (form.kind === 'certificate') {
-      setCertifications((prev) => [payload, ...prev])
+    if (form.kind === "certificate") {
+      setCertifications((prev) => [payload, ...prev]);
     } else {
-      setBadges((prev) => [payload, ...prev])
+      setBadges((prev) => [payload, ...prev]);
     }
 
-    resetForm()
-    setActiveTab(form.kind)
-  }
+    resetForm();
+    setActiveTab(form.kind);
+  };
 
-  const isUpcoming = form.status === 'upcoming'
+  const isUpcoming = form.status === "upcoming";
 
   const handleCredlyInputChange = (value: string) => {
-    const badgeId = extractCredlyBadgeId(value)
+    const badgeId = extractCredlyBadgeId(value);
 
     setCredlyForm((prev) => ({
       ...prev,
       rawInput: value,
       badgeId,
-    }))
+    }));
 
     if (!value.trim()) {
-      setCredlyError(null)
-      return
+      setCredlyError(null);
+      return;
     }
 
     setCredlyError(
       badgeId
         ? null
-        : 'Unable to find a Credly badge UUID in the provided snippet or URL.',
-    )
-  }
+        : "Unable to find a Credly badge UUID in the provided snippet or URL.",
+    );
+  };
 
   const handleCredlySubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+    event.preventDefault();
     const parsedBadgeId =
-      credlyForm.badgeId || extractCredlyBadgeId(credlyForm.rawInput)
+      credlyForm.badgeId || extractCredlyBadgeId(credlyForm.rawInput);
 
     if (!parsedBadgeId) {
       setCredlyError(
-        'Provide a Credly embed snippet or public badge URL so we can detect the badge UUID.',
-      )
-      return
+        "Provide a Credly embed snippet or public badge URL so we can detect the badge UUID.",
+      );
+      return;
     }
 
     const payload: CredlyEmbed = {
@@ -429,19 +429,19 @@ export default function AdminPage() {
       category: credlyForm.category,
       title: credlyForm.title.trim() || undefined,
       issuer: credlyForm.issuer.trim() || undefined,
-    }
+    };
 
     setCredlyItems((prev) => {
-      const filtered = prev.filter((item) => item.badgeId !== parsedBadgeId)
-      return [payload, ...filtered]
-    })
+      const filtered = prev.filter((item) => item.badgeId !== parsedBadgeId);
+      return [payload, ...filtered];
+    });
 
     setCredlyForm((prev) => ({
       ...initialCredlyForm,
       category: prev.category,
-    }))
-    setCredlyError(null)
-  }
+    }));
+    setCredlyError(null);
+  };
 
   const handleCredlyDelete = (badge: CredlyEmbed) => {
     if (
@@ -449,13 +449,13 @@ export default function AdminPage() {
         `Remove badge ${badge.badgeId}? This only updates the preview list.`,
       )
     ) {
-      return
+      return;
     }
 
     setCredlyItems((prev) =>
       prev.filter((item) => item.badgeId !== badge.badgeId),
-    )
-  }
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-dark to-dark-lighter py-16">
@@ -604,8 +604,8 @@ export default function AdminPage() {
                       key={option.value}
                       className={`flex cursor-pointer flex-col gap-2 rounded-xl border px-4 py-3 text-sm transition ${
                         form.status === option.value
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-white/10 bg-white/[0.02] text-gray-300 hover:border-primary/40'
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-white/10 bg-white/[0.02] text-gray-300 hover:border-primary/40"
                       }`}
                     >
                       <input
@@ -660,8 +660,8 @@ export default function AdminPage() {
                       label="Preview image URL"
                       helper={
                         isUpcoming
-                          ? 'Optional for upcoming achievements.'
-                          : 'Displays in the main achievements grid.'
+                          ? "Optional for upcoming achievements."
+                          : "Displays in the main achievements grid."
                       }
                     />
                     <Input
@@ -973,7 +973,7 @@ export default function AdminPage() {
                 {credlyCategoryOptions.map((option) => {
                   const items = credlyItems.filter(
                     (item) => item.category === option.value,
-                  )
+                  );
 
                   return (
                     <div key={option.value} className="space-y-4">
@@ -989,7 +989,7 @@ export default function AdminPage() {
                       {items.length > 0 ? (
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                           {items.map((item) => {
-                            const title = item.title ?? 'Credly Badge'
+                            const title = item.title ?? "Credly Badge";
 
                             return (
                               <div
@@ -1045,7 +1045,7 @@ export default function AdminPage() {
                                   View on Credly
                                 </a>
                               </div>
-                            )
+                            );
                           })}
                         </div>
                       ) : (
@@ -1054,7 +1054,7 @@ export default function AdminPage() {
                         </div>
                       )}
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -1062,5 +1062,5 @@ export default function AdminPage() {
         </section>
       </div>
     </div>
-  )
+  );
 }
