@@ -317,6 +317,46 @@ export default function AdminPage() {
   }, [credlyItems]);
 
   useEffect(() => {
+    const handleScriptLoad = () => {
+      window.Credly?.Tracker?.init?.()
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${credlyScriptSrc}"]`)
+
+    if (existingScript) {
+      if (window.Credly) {
+        handleScriptLoad()
+      } else {
+        existingScript.addEventListener('load', handleScriptLoad)
+      }
+
+      return () => {
+        existingScript.removeEventListener('load', handleScriptLoad)
+      }
+    }
+
+    const script = document.createElement('script')
+    script.src = credlyScriptSrc
+    script.async = true
+    script.addEventListener('load', handleScriptLoad)
+    document.body.appendChild(script)
+
+    return () => {
+      script.removeEventListener('load', handleScriptLoad)
+    }
+  }, [])
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      window.Credly?.Tracker?.init?.()
+    }, 60)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [credlyItems])
+
+  useEffect(() => {
     if (!categories.includes(form.category)) {
       setForm((prev) => ({ ...prev, category: categories[0] ?? "General" }));
     }
@@ -362,6 +402,14 @@ export default function AdminPage() {
     }));
     setCredlyError(null);
   }, [setCredlyError, setCredlyForm]);
+
+  const resetCredlyForm = () => {
+    setCredlyForm((prev) => ({
+      ...initialCredlyForm,
+      category: prev.category,
+    }))
+    setCredlyError(null)
+  }
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -461,6 +509,59 @@ export default function AdminPage() {
     },
     [setCredlyItems],
   );
+
+  const handleCredlyInputChange = (value: string) => {
+    const badgeId = extractCredlyBadgeId(value)
+
+    setCredlyForm((prev) => ({
+      ...prev,
+      rawInput: value,
+      badgeId,
+    }))
+
+    if (!value.trim()) {
+      setCredlyError(null)
+      return
+    }
+
+    setCredlyError(badgeId ? null : 'Unable to find a Credly badge UUID in the provided snippet or URL.')
+  }
+
+  const handleCredlySubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const parsedBadgeId = credlyForm.badgeId || extractCredlyBadgeId(credlyForm.rawInput)
+
+    if (!parsedBadgeId) {
+      setCredlyError('Provide a Credly embed snippet or public badge URL so we can detect the badge UUID.')
+      return
+    }
+
+    const payload: CredlyEmbed = {
+      badgeId: parsedBadgeId,
+      category: credlyForm.category,
+      title: credlyForm.title.trim() || undefined,
+      issuer: credlyForm.issuer.trim() || undefined,
+    }
+
+    setCredlyItems((prev) => {
+      const filtered = prev.filter((item) => item.badgeId !== parsedBadgeId)
+      return [payload, ...filtered]
+    })
+
+    setCredlyForm((prev) => ({
+      ...initialCredlyForm,
+      category: prev.category,
+    }))
+    setCredlyError(null)
+  }
+
+  const handleCredlyDelete = (badge: CredlyEmbed) => {
+    if (!window.confirm(`Remove badge ${badge.badgeId}? This only updates the preview list.`)) {
+      return
+    }
+
+    setCredlyItems((prev) => prev.filter((item) => item.badgeId !== badge.badgeId))
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-dark to-dark-lighter py-16">
