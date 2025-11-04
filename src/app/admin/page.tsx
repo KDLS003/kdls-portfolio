@@ -29,6 +29,7 @@ import {
   waitForNextFrame,
 } from '../../lib/credlyScript'
 import CredlyEmbedFrame from '../../components/CredlyEmbedFrame'
+import LogoutButton from '../../components/admin/LogoutButton'
 
 const categories: { value: CredlyCategory; label: string; helper: string }[] = [
   {
@@ -261,23 +262,26 @@ export default function AdminPage() {
               href="/"
               className="inline-flex items-center gap-2 text-sm font-medium text-primary transition hover:text-secondary"
             >
-              <FiArrowLeft className="h-4 w-4" /> Back to portfolio
+              <FiArrowLeft className="h-4 w-4" /> View portfolio
             </Link>
             <div>
               <h1 className="text-3xl font-semibold sm:text-4xl">Credential Manager</h1>
               <p className="mt-2 max-w-2xl text-sm text-gray-300 sm:text-base">
-                Paste the embed code snippet provided by Credly to publish a badge instantly. Every addition updates the
-                home page while preserving the existing design.
+                You are signed in to the private admin workspace. Paste the embed code snippet provided by Credly to publish
+                a badge instantly—every addition updates the home page while preserving the existing design.
               </p>
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-gray-300 sm:max-w-xs">
-            <p className="font-semibold text-primary">Quick tips</p>
-            <ul className="mt-3 space-y-2 text-xs text-gray-400">
-              <li>Use the “Copy embed code” button on Credly, then paste it below.</li>
-              <li>The script will verify that Credly loaded the badge successfully.</li>
-              <li>You can remove badges at any time—the main site syncs automatically.</li>
-            </ul>
+          <div className="flex flex-col gap-4 sm:items-end sm:text-right">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-gray-300 sm:max-w-xs">
+              <p className="font-semibold text-primary">Quick tips</p>
+              <ul className="mt-3 space-y-2 text-xs text-gray-400">
+                <li>Use the “Copy embed code” button on Credly, then paste it below.</li>
+                <li>The script will verify that Credly loaded the badge successfully.</li>
+                <li>You can remove badges at any time—the main site syncs automatically.</li>
+              </ul>
+            </div>
+            <LogoutButton className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:bg-white/10 sm:hidden" />
           </div>
         </header>
 
