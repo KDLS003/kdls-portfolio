@@ -98,7 +98,11 @@ export const credlyBadges: CredlyEmbed[] = [
 export const isCredlyBadgeId = (value: string) => CREDLY_BADGE_ID_PATTERN.test(value)
 
 export const sanitizeCredlyEmbedInput = (value: string) =>
-  value.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '').trim()
+  value
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+    .replace(/<(iframe|object|embed)[^>]*\/>/gi, '')
+    .replace(/<(iframe|object|embed)[^>]*>[\s\S]*?<\/(iframe|object|embed)>/gi, '')
+    .trim()
 
 export const parseCredlyEmbedCode = (value: string) => {
   const sanitized = sanitizeCredlyEmbedInput(value)
@@ -124,25 +128,50 @@ export const parseCredlyEmbedCode = (value: string) => {
     const element = template.content.querySelector<HTMLElement>('[data-share-badge-id]')
 
     if (element) {
-      element.setAttribute('data-share-badge-id', badgeIdMatch[1])
-      element.setAttribute('data-share-badge-host', element.getAttribute('data-share-badge-host') ?? 'https://www.credly.com')
-      element.setAttribute('data-hide-footer', 'true')
-      element.setAttribute('data-hide-share', 'true')
-      element.setAttribute('data-iframe-width', element.getAttribute('data-iframe-width') ?? '340')
-      element.setAttribute('data-iframe-height', element.getAttribute('data-iframe-height') ?? '340')
+      const badgeId = badgeIdMatch[1]
+      const sanitizedElement = document.createElement('div')
+      const allowedAttributes = new Set([
+        'data-share-badge-id',
+        'data-share-badge-host',
+        'data-hide-footer',
+        'data-hide-share',
+        'data-iframe-width',
+        'data-iframe-height',
+        'data-iframe-title',
+        'data-iframe-src',
+      ])
 
-      if (!element.getAttribute('data-iframe-src')) {
-        element.setAttribute(
-          'data-iframe-src',
-          `https://www.credly.com/embedded_window/${badgeIdMatch[1]}?embed=true&show_share=false`,
-        )
+      const attributeValues = new Map<string, string>()
+      for (const attribute of Array.from(element.attributes)) {
+        const name = attribute.name.toLowerCase()
+        if (name.startsWith('on') || name === 'style') continue
+        if (!allowedAttributes.has(name)) continue
+        if (name === 'data-iframe-src') continue
+        attributeValues.set(name, attribute.value.trim())
+      }
+
+      sanitizedElement.setAttribute('data-share-badge-id', badgeId)
+      sanitizedElement.setAttribute('data-share-badge-host', 'https://www.credly.com')
+      sanitizedElement.setAttribute('data-hide-footer', 'true')
+      sanitizedElement.setAttribute('data-hide-share', 'true')
+      sanitizedElement.setAttribute('data-iframe-width', attributeValues.get('data-iframe-width') ?? '340')
+      sanitizedElement.setAttribute('data-iframe-height', attributeValues.get('data-iframe-height') ?? '340')
+
+      const iframeTitle = attributeValues.get('data-iframe-title')?.trim()
+      if (iframeTitle) {
+        sanitizedElement.setAttribute('data-iframe-title', iframeTitle)
       }
 
       if (!title) {
-        title = element.getAttribute('data-iframe-title')?.trim() ?? ''
+        title = iframeTitle ?? ''
       }
 
-      normalized = element.outerHTML
+      sanitizedElement.setAttribute(
+        'data-iframe-src',
+        `https://www.credly.com/embedded_window/${badgeId}?embed=true&show_share=false`,
+      )
+
+      normalized = sanitizedElement.outerHTML
     }
   }
 

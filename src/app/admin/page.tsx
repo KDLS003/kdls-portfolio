@@ -276,6 +276,7 @@ export default function AdminPage() {
             <ul className="mt-3 space-y-2 text-xs text-gray-400">
               <li>Use the “Copy embed code” button on Credly, then paste it below.</li>
               <li>The script will verify that Credly loaded the badge successfully.</li>
+              <li>Only the standard Credly embed snippet is accepted—extra HTML or scripts are stripped.</li>
               <li>You can remove badges at any time—the main site syncs automatically.</li>
             </ul>
           </div>
