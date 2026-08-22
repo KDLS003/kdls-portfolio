@@ -1,28 +1,43 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { FiShield, FiLock, FiCode, FiCloud, FiSearch, FiAward, FiTerminal } from 'react-icons/fi'
+import {
+  FiShield,
+  FiLock,
+  FiCode,
+  FiCloud,
+  FiSearch,
+  FiAward,
+  FiTerminal,
+  FiUsers,
+  FiTarget,
+} from 'react-icons/fi'
 import { fadeIn, staggerContainer } from '../lib/animations'
 import Image from 'next/image'
+
+const highlights = [
+  { icon: <FiAward className="w-4 h-4" />, label: "Dean's Lister, S.Y. 2022–2025" },
+  { icon: <FiUsers className="w-4 h-4" />, label: 'CSIA Officer, 5 events coordinated' },
+  { icon: <FiCode className="w-4 h-4" />, label: '3 open-source security tools shipped' },
+  { icon: <FiTarget className="w-4 h-4" />, label: 'Open to full-time roles' },
+]
 
 const skillCategories = [
   {
     name: 'Network Defense & Response',
-    summary: 'Hands-on incident response practice and infrastructure hardening in academic security labs.',
+    summary: 'On-the-job endpoint security and infrastructure support gained during an IT infrastructure internship.',
     skills: [
       {
         icon: <FiShield className="w-6 h-6" />,
-        title: 'Network Forensics & Analysis',
+        title: 'Endpoint Security & Monitoring',
         description:
-          'Triaged 200+ PCAPs with Wireshark and Zeek to investigate simulated intrusions, documenting repeatable playbooks for classmates.',
-        level: 'Advanced' as const,
+          'Gained hands-on exposure to CrowdStrike Falcon during endpoint security deployment, including console familiarization and workflow observation in a live training environment.',
       },
       {
         icon: <FiTerminal className="w-6 h-6" />,
-        title: 'System Administration',
+        title: 'Network Infrastructure Support',
         description:
-          'Hardened Windows Server 2016 and Debian lab environments, reducing misconfigurations by 40% across student teams through shared baselines.',
-        level: 'Proficient' as const,
+          'Supported FortiGate setup concepts across LAN, WAN, DNS, and VLAN segmentation; validated basic lab topology and connectivity in a controlled training environment.',
       },
     ],
   },
@@ -35,14 +50,12 @@ const skillCategories = [
         title: 'Cryptography Development',
         description:
           'Authored a reusable crypto and steganography toolkit adopted by 30+ peers for coursework and capture-the-flag training.',
-        level: 'Advanced' as const,
       },
       {
         icon: <FiCode className="w-6 h-6" />,
         title: 'Security Development',
         description:
           'Automated password-cracking pipelines, wireless reconnaissance, and phishing simulations with Python and Bash scripting.',
-        level: 'Proficient' as const,
       },
     ],
   },
@@ -54,39 +67,17 @@ const skillCategories = [
         icon: <FiCloud className="w-6 h-6" />,
         title: 'Cloud Security',
         description:
-          'Implemented IAM, Security Group, and VPC guardrails for class projects on AWS, enabling compliant deployments in under 15 minutes.',
-        level: 'Proficient' as const,
+          'Completed AWS Academy Cloud Security Builder coursework covering IAM, Security Groups, and VPC guardrails.',
       },
       {
         icon: <FiSearch className="w-6 h-6" />,
         title: 'CTF & Security Assessment',
         description:
           'Designed 8 CTF challenges and facilitated workshops that drew 120+ participants, emphasizing OSINT and IoT threat modeling.',
-        level: 'Advanced' as const,
       },
     ],
   },
 ]
-
-const PROFICIENCY_WEIGHT = {
-  Foundational: 1,
-  Proficient: 2,
-  Advanced: 3,
-} as const
-
-const renderLevel = (level: keyof typeof PROFICIENCY_WEIGHT) => (
-  <div className="flex items-center gap-2 mt-4" aria-label={`Proficiency level: ${level}`}>
-    {[1, 2, 3].map((step) => (
-      <span
-        key={step}
-        className={`h-2 w-8 rounded-full transition-colors ${
-          step <= PROFICIENCY_WEIGHT[level] ? 'bg-primary' : 'bg-gray-700'
-        }`}
-      />
-    ))}
-    <span className="text-[11px] uppercase tracking-wider text-gray-400">{level}</span>
-  </div>
-)
 
 export default function About() {
   return (
@@ -117,45 +108,46 @@ export default function About() {
             >
               Kenneth David L. Santos <span className="text-primary font-mono tracking-wider">(ynk)</span>
             </motion.h1>
-            <motion.p 
+            <motion.p
               variants={fadeIn}
               className="text-lg bg-gradient-to-r from-primary to-cyan-400 bg-clip-text text-transparent font-semibold mb-4 tracking-wide"
             >
-              BS Cybersecurity, Holy Angel University (2022–2026)
+              BS Cybersecurity, Holy Angel University · Graduated April 2026
             </motion.p>
           </div>
 
-          <div className="space-y-6 text-center max-w-3xl mx-auto">
+          <div className="max-w-2xl mx-auto text-left space-y-6">
             <motion.p
               variants={fadeIn}
-              className="prose prose-invert text-gray-300 text-lg leading-relaxed mx-auto"
+              className="text-gray-300 text-lg leading-relaxed"
             >
-              Final-year cybersecurity specialist with hands-on experience in network forensics, wireless security, and cryptography. I translate classroom research into field-ready playbooks that shorten response times for student blue teams.
+              Cybersecurity graduate with hands-on experience in endpoint security, network infrastructure support, and security-focused development, from academic research to real IT infrastructure environments.
             </motion.p>
 
-            <motion.div variants={fadeIn} className="space-y-2">
-              <p className="text-gray-300 text-lg leading-relaxed">
-                Developer of{' '}
-                <span className="text-primary font-medium">WiFi Sentinel</span>,{' '}
-                a wireless security testing framework,{' '}
-                <span className="text-primary font-medium">CryptoToolkit</span>,{' '}
-                a comprehensive encryption and steganography suite, and{' '}
-                <span className="text-primary font-medium">ByteBurrow</span>,{' '}
-                a file analysis toolkit.
-              </p>
-            </motion.div>
+            <motion.ul
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              className="flex flex-wrap gap-3"
+            >
+              {highlights.map((item) => (
+                <motion.li
+                  key={item.label}
+                  variants={fadeIn}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-full bg-primary/10 text-primary border border-primary/30"
+                >
+                  {item.icon}
+                  {item.label}
+                </motion.li>
+              ))}
+            </motion.ul>
 
-            <motion.p variants={fadeIn} className="text-gray-300 text-lg leading-relaxed">
-              Recognized as a{' '}
-              <span className="text-primary font-medium">Dean's Lister</span>{' '}
-              for six consecutive terms and former officer at{' '}
-              <span className="text-primary font-medium">CSIA</span>,{' '}
-              where I coordinated 5 campus-wide security events and mentored first-time CTF competitors.
-            </motion.p>
-
-            <motion.p variants={fadeIn} className="text-gray-300 text-lg leading-relaxed">
-              Actively exploring emerging threats and defense mechanisms, while contributing to the open-source security community.
-              Passionate about turning complex security challenges into innovative, practical solutions that teammates can reuse.
+            <motion.p variants={fadeIn} className="text-gray-400 leading-relaxed">
+              Built <span className="text-primary font-medium">WiFi Sentinel</span>,{' '}
+              <span className="text-primary font-medium">CryptoToolkit</span>, and{' '}
+              <span className="text-primary font-medium">ByteBurrow</span>, three open-source
+              security tools covering wireless testing, cryptography, and file analysis (see Projects below).
             </motion.p>
           </div>
         </motion.div>
@@ -200,7 +192,6 @@ export default function About() {
                     </div>
                     <h4 className="text-xl font-semibold mb-2">{skill.title}</h4>
                     <p className="text-gray-400 leading-relaxed">{skill.description}</p>
-                    {renderLevel(skill.level)}
                   </motion.div>
                 ))}
               </motion.div>
@@ -227,19 +218,6 @@ export default function About() {
           {/* Timeline vertical line */}
           <div className="absolute left-6 top-0 bottom-0 w-1 bg-primary/30 rounded-full" />
           <div className="space-y-12 pl-16">
-            {/* Timeline item 1 */}
-            <div className="relative">
-              <div className="absolute -left-8 top-2 w-6 h-6 rounded-full bg-dark border-4 border-primary flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-primary" />
-              </div>
-              <div className="bg-dark p-6 rounded-xl border border-primary/30 shadow-lg">
-                <h4 className="text-xl font-semibold mb-2">BS Cybersecurity Student</h4>
-                <span className="text-primary text-sm mb-2 block">2022–2026</span>
-                <p className="text-gray-400">
-                  Currently studying at Holy Angel University, expected to graduate in 2026. Dean's Lister and previously served as an officer in CSIA, the university's cybersecurity organization.
-                </p>
-              </div>
-            </div>
             {/* Timeline item: CSIA Member & CTF/Workshop Participant */}
             <div className="relative">
               <div className="absolute -left-8 top-2 w-6 h-6 rounded-full bg-dark border-4 border-primary flex items-center justify-center">
@@ -268,14 +246,56 @@ export default function About() {
             </div>
             {/* Timeline item 4 - Capstone */}
             <div className="relative">
+              <div className="absolute -left-8 top-2 w-6 h-6 rounded-full bg-dark border-4 border-primary flex items-center justify-center">
+                <div className="w-2 h-2 rounded-full bg-primary" />
+              </div>
+              <div className="bg-dark p-6 rounded-xl border border-primary/30 shadow-lg">
+                <h4 className="text-xl font-semibold mb-2">Capstone: Detection and Mitigation of Dormant Cyber Threats in Intelligent Virtual Assistants</h4>
+                <span className="text-primary text-sm mb-2 block">2025–2026</span>
+                <p className="text-gray-400">
+                  Built an on-device monitoring framework on Raspberry Pi 4 using TensorFlow Lite, MFCC preprocessing, VAD, and forensic logging to detect suspicious voice-trigger activity.
+                </p>
+              </div>
+            </div>
+
+            {/* Timeline item: IT Infrastructure Internship */}
+            <div className="relative">
+              <div className="absolute -left-8 top-2 w-6 h-6 rounded-full bg-dark border-4 border-primary flex items-center justify-center">
+                <div className="w-2 h-2 rounded-full bg-primary" />
+              </div>
+              <div className="bg-dark p-6 rounded-xl border border-primary/30 shadow-lg">
+                <h4 className="text-xl font-semibold mb-2">IT Infrastructure Intern, Adventus IT Services Philippines</h4>
+                <span className="text-primary text-sm mb-2 block">Dec 2025–Mar 2026</span>
+                <p className="text-gray-400">
+                  Supported endpoint security and network infrastructure workflows—Excel-based reporting for Action1 and KnowBe4, FortiGate and VLAN segmentation concepts, and CrowdStrike Falcon console familiarization.
+                </p>
+              </div>
+            </div>
+
+            {/* Timeline item: Graduation */}
+            <div className="relative">
+              <div className="absolute -left-8 top-2 w-6 h-6 rounded-full bg-dark border-4 border-primary flex items-center justify-center">
+                <div className="w-2 h-2 rounded-full bg-primary" />
+              </div>
+              <div className="bg-dark p-6 rounded-xl border border-primary/30 shadow-lg">
+                <h4 className="text-xl font-semibold mb-2">Graduated BS Cybersecurity</h4>
+                <span className="text-primary text-sm mb-2 block">April 2026</span>
+                <p className="text-gray-400">
+                  Graduated from Holy Angel University as a Dean's Lister (S.Y. 2022–2025).
+                </p>
+              </div>
+            </div>
+
+            {/* Timeline item: NDA contract work */}
+            <div className="relative">
               <div className="absolute -left-8 top-2 w-6 h-6 rounded-full bg-dark border-4 border-cyan-400 flex items-center justify-center">
                 <div className="w-2 h-2 rounded-full bg-cyan-400" />
               </div>
               <div className="bg-dark p-6 rounded-xl border-2 border-cyan-400 shadow-lg">
-                <h4 className="text-xl font-semibold mb-2 text-cyan-400">Preparing for Capstone Project</h4>
-                <span className="text-cyan-400 text-sm mb-2 block">2025 (Ongoing)</span>
+                <h4 className="text-xl font-semibold mb-2 text-cyan-400">Contract Security Work (NDA)</h4>
+                <span className="text-cyan-400 text-sm mb-2 block">2026 (Ongoing)</span>
                 <p className="text-gray-300">
-                  Currently preparing for my capstone project, focusing on applying my cybersecurity knowledge and skills to a real-world challenge. Excited to innovate, collaborate, and make a meaningful impact before graduation.
+                  Project-based contract work for a private client under NDA—building data-collection tooling and performing malware analysis, plus light sales support.
                 </p>
               </div>
             </div>
@@ -287,11 +307,10 @@ export default function About() {
               </div>
               <div className="bg-dark p-6 rounded-xl border border-primary/30 shadow-lg bg-gradient-to-b from-dark to-dark/50">
                 <h4 className="text-xl font-semibold mb-2 text-primary">Looking Ahead</h4>
-                <span className="text-primary/80 text-sm mb-2 block">2025 and Beyond</span>
+                <span className="text-primary/80 text-sm mb-2 block">2026 and Beyond</span>
                 <p className="text-gray-300">
-                  Pursuing industry certifications and expanding expertise across offensive security, cloud infrastructure, 
-                  and emerging technologies. Committed to advancing the field through continuous learning, innovative tool 
-                  development, and active participation in the cybersecurity community.
+                  Actively seeking a full-time, entry-level cybersecurity role—open to security operations, vulnerability management,
+                  incident response, IT audit, or infrastructure security support, anywhere in the Philippines.
                 </p>
               </div>
             </div>

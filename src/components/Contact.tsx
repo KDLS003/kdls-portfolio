@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import {
   FiMail,
+  FiPhone,
   FiGithub,
   FiLinkedin,
   FiInstagram,
@@ -16,7 +17,7 @@ const contactHighlights = [
   {
     icon: <FiCalendar className="w-5 h-5 text-primary" />,
     label: 'Availability',
-    value: 'Open to cybersecurity internships and part-time roles starting August 2025.',
+    value: 'Open to full-time, entry-level cybersecurity roles—on-site, hybrid, or remote. Available to relocate. Actively interviewing now.',
   },
   {
     icon: <FiClock className="w-5 h-5 text-primary" />,
@@ -75,6 +76,15 @@ export default function Contact() {
           >
             <FiMail className="w-5 h-5 sm:w-6 sm:h-6" />
             kennethsantos003@gmail.com
+          </motion.a>
+          <motion.a
+            href="tel:+639393746243"
+            className="flex items-center gap-2 sm:gap-3 text-base sm:text-lg text-primary hover:underline"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <FiPhone className="w-5 h-5 sm:w-6 sm:h-6" />
+            +63 939 374 6243
           </motion.a>
           <div className="flex gap-4 sm:gap-6 justify-center">
             <motion.a
