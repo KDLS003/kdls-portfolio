@@ -1,15 +1,10 @@
-export type CredlyCategory = 'certification' | 'badge'
+export type CredlyCategory = 'certification' | 'badge' | 'training'
 
 export type CredlyEmbed = {
   badgeId: string
   category: CredlyCategory
   title?: string
   issuer?: string
-  embedHtml?: string
-}
-
-export type StoredCredlyEmbed = CredlyEmbed & {
-  createdAt: string
 }
 
 declare global {
@@ -22,11 +17,8 @@ declare global {
   }
 }
 
-const CREDLY_BADGE_ID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
-
-export const CUSTOM_CREDLY_STORAGE_KEY = 'kdls-portfolio.custom-credly-embeds.v1'
-
 export const credlyBadges: CredlyEmbed[] = [
+  // Professional Certifications
   {
     title: 'Cisco Certificate in Ethical Hacking',
     issuer: 'Cisco',
@@ -35,7 +27,7 @@ export const credlyBadges: CredlyEmbed[] = [
   },
   {
     title: 'Offensive Security Capture the Flag - Operation SMB Exploit',
-    issuer: 'Offensive Security',
+    issuer: 'Cisco',
     badgeId: '786bdf71-3683-4ece-87c7-de90f4cce300',
     category: 'certification',
   },
@@ -48,18 +40,18 @@ export const credlyBadges: CredlyEmbed[] = [
   {
     title: 'Fortinet Certified Associate Cybersecurity',
     issuer: 'Fortinet',
-    badgeId: '4d6e82bd-7017-4f13-8680-38922ce466fe',
+    badgeId: '488dbcdd-4d7c-4112-b77f-b38027c6c297',
     category: 'certification',
   },
   {
     title: 'Fortinet FortiGate 7.6 Operator',
     issuer: 'Fortinet',
-    badgeId: '7803dc94-e30f-4e4a-b78c-b76e322b3e24',
+    badgeId: 'b3778dde-0c59-4469-9801-f8eaa0973e1b',
     category: 'certification',
   },
   {
     title: 'Ethical Hacker',
-    issuer: 'Certiport',
+    issuer: 'Cisco',
     badgeId: 'a1cb42eb-783c-462a-ab49-f284c7f0b356',
     category: 'certification',
   },
@@ -69,6 +61,20 @@ export const credlyBadges: CredlyEmbed[] = [
     badgeId: 'c3abddc5-2676-415a-9869-03068e42a2e6',
     category: 'certification',
   },
+  {
+    title: 'ISC2 Candidate',
+    issuer: 'ISC2',
+    badgeId: '1bd6d233-db8f-49ae-bdb9-45dc26596a92',
+    category: 'certification',
+  },
+  {
+    title: 'AWS Academy Graduate – Cloud Security Builder',
+    issuer: 'AWS Academy',
+    badgeId: '3fb22e79-610f-4231-916d-3f895efcb327',
+    category: 'certification',
+  },
+
+  // Digital Badges & Challenges
   {
     title: 'English for IT 1',
     issuer: 'Cisco',
@@ -93,116 +99,48 @@ export const credlyBadges: CredlyEmbed[] = [
     badgeId: '013dd79e-503e-45c7-b5d5-b29dee83d61e',
     category: 'badge',
   },
+
+  // Fortinet Security Academy training track (rendered as a compact cluster, not full cards)
+  {
+    title: 'Getting Started in Cybersecurity 3.0',
+    issuer: 'Fortinet',
+    badgeId: 'c3214a0f-8a1f-40bd-a479-2b344d3da8f3',
+    category: 'training',
+  },
+  {
+    title: 'Introduction to the Threat Landscape 3.0',
+    issuer: 'Fortinet',
+    badgeId: 'f848bb35-7286-4b27-befe-bf1a679ff159',
+    category: 'training',
+  },
+  {
+    title: 'Technical Introduction to Cybersecurity 3.0',
+    issuer: 'Fortinet',
+    badgeId: '2c6d7aa4-0ba3-4a98-a5e2-dcba682eccc1',
+    category: 'training',
+  },
+  {
+    title: 'Fortinet Certified Fundamentals Cybersecurity',
+    issuer: 'Fortinet',
+    badgeId: '24e3ffaf-25d9-46c4-b91e-1bf4c71c7ebf',
+    category: 'training',
+  },
+  {
+    title: 'Fortinet NSE 1 Certified in Cybersecurity',
+    issuer: 'Fortinet',
+    badgeId: '209f06aa-acc5-412e-8f8a-e99b804985c2',
+    category: 'training',
+  },
+  {
+    title: 'Fortinet NSE 2 Certified in Cybersecurity',
+    issuer: 'Fortinet',
+    badgeId: 'cbcee921-a441-4130-8a7b-47b44743d2d8',
+    category: 'training',
+  },
+  {
+    title: 'Fortinet NSE 3 Certified in Cybersecurity',
+    issuer: 'Fortinet',
+    badgeId: '2a914a53-270b-4cd0-92fc-ea38cc91a1e2',
+    category: 'training',
+  },
 ]
-
-export const isCredlyBadgeId = (value: string) => CREDLY_BADGE_ID_PATTERN.test(value)
-
-export const sanitizeCredlyEmbedInput = (value: string) =>
-  value.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '').trim()
-
-export const parseCredlyEmbedCode = (value: string) => {
-  const sanitized = sanitizeCredlyEmbedInput(value)
-  const badgeIdPattern = new RegExp(
-    `data-share-badge-id\\s*=\\s*['"](${CREDLY_BADGE_ID_PATTERN.source})['"]`,
-    'i',
-  )
-  const titlePattern = /data-iframe-title\s*=\s*['"]([^'"]+)['"]/i
-
-  const badgeIdMatch = sanitized.match(badgeIdPattern)
-
-  if (!badgeIdMatch?.[1]) {
-    throw new Error('Unable to find a Credly badge ID in the provided embed code.')
-  }
-
-  let title = sanitized.match(titlePattern)?.[1]?.trim() ?? ''
-  let normalized = sanitized
-
-  if (typeof document !== 'undefined') {
-    const template = document.createElement('template')
-    template.innerHTML = sanitized
-
-    const element = template.content.querySelector<HTMLElement>('[data-share-badge-id]')
-
-    if (element) {
-      element.setAttribute('data-share-badge-id', badgeIdMatch[1])
-      element.setAttribute('data-share-badge-host', element.getAttribute('data-share-badge-host') ?? 'https://www.credly.com')
-      element.setAttribute('data-hide-footer', 'true')
-      element.setAttribute('data-hide-share', 'true')
-      element.setAttribute('data-iframe-width', element.getAttribute('data-iframe-width') ?? '340')
-      element.setAttribute('data-iframe-height', element.getAttribute('data-iframe-height') ?? '340')
-
-      if (!element.getAttribute('data-iframe-src')) {
-        element.setAttribute(
-          'data-iframe-src',
-          `https://www.credly.com/embedded_window/${badgeIdMatch[1]}?embed=true&show_share=false`,
-        )
-      }
-
-      if (!title) {
-        title = element.getAttribute('data-iframe-title')?.trim() ?? ''
-      }
-
-      normalized = element.outerHTML
-    }
-  }
-
-  return {
-    sanitized: normalized,
-    badgeId: badgeIdMatch[1],
-    title,
-  }
-}
-
-const isOptionalString = (value: unknown) =>
-  value === undefined || value === null || typeof value === 'string'
-
-const isStoredCredlyEmbed = (value: unknown): value is StoredCredlyEmbed => {
-  if (!value || typeof value !== 'object') return false
-
-  const data = value as Record<string, unknown>
-
-  return (
-    typeof data.badgeId === 'string' &&
-    isCredlyBadgeId(data.badgeId) &&
-    (data.category === 'certification' || data.category === 'badge') &&
-    typeof data.createdAt === 'string' &&
-    isOptionalString(data.title) &&
-    isOptionalString(data.issuer) &&
-    isOptionalString((data as Record<string, unknown>).embedHtml)
-  )
-}
-
-export const loadStoredCredlyEmbeds = (): StoredCredlyEmbed[] => {
-  if (typeof window === 'undefined') return []
-
-  try {
-    const raw = window.localStorage.getItem(CUSTOM_CREDLY_STORAGE_KEY)
-
-    if (!raw) return []
-
-    const parsed = JSON.parse(raw)
-
-    if (!Array.isArray(parsed)) return []
-
-    return parsed.filter(isStoredCredlyEmbed)
-  } catch (error) {
-    console.error('Failed to load stored Credly embeds', error)
-    return []
-  }
-}
-
-export const saveStoredCredlyEmbeds = (embeds: StoredCredlyEmbed[]) => {
-  if (typeof window === 'undefined') return
-
-  try {
-    window.localStorage.setItem(CUSTOM_CREDLY_STORAGE_KEY, JSON.stringify(embeds))
-  } catch (error) {
-    console.error('Failed to persist Credly embeds', error)
-  }
-}
-
-export const toCredlyEmbeds = (stored: StoredCredlyEmbed[]): CredlyEmbed[] =>
-  stored.map(({ createdAt: _createdAt, ...rest }) => rest)
-
-export const sortStoredCredlyEmbeds = (embeds: StoredCredlyEmbed[]) =>
-  [...embeds].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())

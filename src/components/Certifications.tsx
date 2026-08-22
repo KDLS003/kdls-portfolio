@@ -1,21 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { fadeIn } from '../lib/animations'
-import {
-  CUSTOM_CREDLY_STORAGE_KEY,
-  credlyBadges,
-  loadStoredCredlyEmbeds,
-  sortStoredCredlyEmbeds,
-  toCredlyEmbeds,
-} from '../lib/credly'
-import type { CredlyCategory, CredlyEmbed, StoredCredlyEmbed } from '../lib/credly'
+import { credlyBadges } from '../lib/credly'
+import type { CredlyCategory } from '../lib/credly'
 import { ensureCredlyScript, reinitializeCredlyEmbeds } from '../lib/credlyScript'
 import CredlyEmbedFrame from './CredlyEmbedFrame'
 
 const MotionSection = motion.section;
-const MotionArticle = motion.article;
+const MotionLink = motion.a;
 
 const sections = [
   {
@@ -37,34 +31,9 @@ const badgeCardVariants = {
   visible: { opacity: 1, y: 0 },
 }
 
-const mapStoredEmbeds = (stored: StoredCredlyEmbed[]): CredlyEmbed[] =>
-  toCredlyEmbeds(sortStoredCredlyEmbeds(stored))
+const trainingBadges = credlyBadges.filter((badge) => badge.category === 'training')
 
 export default function Certifications() {
-  const [customBadges, setCustomBadges] = useState<CredlyEmbed[]>([])
-
-  useEffect(() => {
-    const updateFromStorage = () => {
-      const stored = loadStoredCredlyEmbeds()
-      setCustomBadges(mapStoredEmbeds(stored))
-    }
-
-    updateFromStorage()
-
-    const handleStorage = (event: StorageEvent) => {
-      if (!event.key) return
-      if (event.key !== CUSTOM_CREDLY_STORAGE_KEY) return
-
-      updateFromStorage()
-    }
-
-    window.addEventListener('storage', handleStorage)
-
-    return () => {
-      window.removeEventListener('storage', handleStorage)
-    }
-  }, [])
-
   useEffect(() => {
     let isActive = true
 
@@ -81,18 +50,6 @@ export default function Certifications() {
       isActive = false
     }
   }, [])
-
-  useEffect(() => {
-    ensureCredlyScript()
-      .then(() => {
-        reinitializeCredlyEmbeds()
-      })
-      .catch((error) => {
-        console.error('Failed to refresh Credly embeds', error)
-      })
-  }, [customBadges])
-
-  const allBadges = useMemo(() => [...credlyBadges, ...customBadges], [customBadges])
 
   return (
     <section id="certifications" className="section bg-dark-lighter">
@@ -112,7 +69,7 @@ export default function Certifications() {
         </motion.div>
 
         {sections.map((section) => {
-          const items = allBadges.filter((badge) => badge.category === section.filter)
+          const items = credlyBadges.filter((badge) => badge.category === section.filter)
 
           return (
             <MotionSection
@@ -133,8 +90,11 @@ export default function Certifications() {
                   const badgeTitle = badge.title ?? 'Credly Badge'
 
                   return (
-                    <MotionArticle
+                    <MotionLink
                       key={badge.badgeId}
+                      href={`https://www.credly.com/badges/${badge.badgeId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       variants={badgeCardVariants}
                       initial="hidden"
                       whileInView="visible"
@@ -148,23 +108,49 @@ export default function Certifications() {
                         <h4 className="mt-3 text-lg font-semibold text-white sm:text-xl">{badgeTitle}</h4>
                       </div>
                       <div className="relative flex grow items-center justify-center rounded-xl border border-white/10 bg-black/20 p-4">
-                        <CredlyEmbedFrame badgeId={badge.badgeId} embedHtml={badge.embedHtml} />
+                        <CredlyEmbedFrame badgeId={badge.badgeId} />
                       </div>
-                      <a
-                        href={`https://www.credly.com/badges/${badge.badgeId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-medium uppercase tracking-wide text-primary transition group-hover:text-secondary"
-                      >
+                      <span className="text-xs font-medium uppercase tracking-wide text-primary transition group-hover:text-secondary">
                         View on Credly
-                      </a>
-                    </MotionArticle>
+                      </span>
+                    </MotionLink>
                   )
                 })}
               </div>
             </MotionSection>
           )
         })}
+
+        {trainingBadges.length > 0 && (
+          <MotionSection
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={fadeIn}
+            className="mb-16"
+          >
+            <div className="mx-auto mb-8 max-w-3xl text-center">
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white">Fortinet Security Academy</h3>
+              <p className="mt-3 text-sm text-gray-400 sm:text-base">
+                Foundational cybersecurity training track, {trainingBadges.length} modules completed.
+              </p>
+            </div>
+
+            <div className="mx-auto flex max-w-3xl flex-wrap justify-center gap-3">
+              {trainingBadges.map((badge) => (
+                <a
+                  key={badge.badgeId}
+                  href={`https://www.credly.com/badges/${badge.badgeId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm text-primary transition hover:border-primary/60 hover:bg-primary/20"
+                >
+                  {badge.title ?? 'Credly Badge'}
+                </a>
+              ))}
+            </div>
+          </MotionSection>
+        )}
 
         <div className="text-center text-gray-400 text-sm sm:text-base">
           For a comprehensive credential history, visit my{' '}
